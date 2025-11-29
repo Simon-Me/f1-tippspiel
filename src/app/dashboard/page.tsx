@@ -68,6 +68,18 @@ export default function DashboardPage() {
   const [timeLeft, setTimeLeft] = useState<string>('')
   const [canTip, setCanTip] = useState(true)
   const [sessionTimes, setSessionTimes] = useState<SessionTime[]>([])
+  
+  // Live Simulation
+  const [livePositions, setLivePositions] = useState<{position: number, driver_number: number, name_acronym?: string}[]>([])
+  const [liveSessionActive, setLiveSessionActive] = useState(false)
+  const [liveSessionName, setLiveSessionName] = useState<string>('')
+  const [simulatedStandings, setSimulatedStandings] = useState<{
+    profile: Profile
+    prediction: Prediction | null
+    currentPoints: number
+    simulatedPoints: number
+    totalSimulated: number
+  }[]>([])
 
   useEffect(() => {
     if (!loading && !user) router.push('/login')
@@ -299,6 +311,86 @@ export default function DashboardPage() {
     return () => clearInterval(interval)
   }, [user])
 
+  // Live-Simulation: Holt OpenF1 Positionen und berechnet simulierte Punktestände
+  useEffect(() => {
+    const fetchLiveSimulation = async () => {
+      if (!nextRace || allPlayers.length === 0) return
+      
+      try {
+        const res = await fetch('/api/live-positions')
+        if (!res.ok) return
+        
+        const data = await res.json()
+        
+        setLivePositions(data.positions || [])
+        setLiveSessionActive(data.isActive || false)
+        setLiveSessionName(data.sessionInfo?.session_name || '')
+        
+        // Wenn Live-Session aktiv, berechne simulierte Punkte
+        if (data.isActive && data.positions?.length > 0) {
+          const positions = data.positions as {position: number, driver_number: number}[]
+          const p1 = positions[0]?.driver_number || 0
+          const p2 = positions[1]?.driver_number || 0
+          const p3 = positions[2]?.driver_number || 0
+          
+          // Bestimme Session-Typ aus dem Namen
+          const sessionName = (data.sessionInfo?.session_name || '').toLowerCase()
+          let sessionType: 'qualifying' | 'sprint' | 'race' = 'race'
+          if (sessionName.includes('quali')) sessionType = 'qualifying'
+          else if (sessionName.includes('sprint') && !sessionName.includes('quali')) sessionType = 'sprint'
+          
+          // Hole Tipps für diese Session
+          const predictions = allRacePredictions[sessionType] || []
+          
+          // Berechne simulierte Punkte für jeden Spieler
+          const standings = allPlayers.map(player => {
+            const playerPred = predictions.find(p => p.user.id === player.id)
+            const prediction = playerPred?.prediction || null
+            
+            let simPoints = 0
+            if (prediction) {
+              if (sessionType === 'qualifying') {
+                if (prediction.pole_driver === p1) simPoints += 10
+              } else if (sessionType === 'sprint') {
+                if (prediction.p1_driver === p1) simPoints += 15
+                if (prediction.p2_driver === p2) simPoints += 10
+                if (prediction.p3_driver === p3) simPoints += 5
+              } else {
+                if (prediction.p1_driver === p1) simPoints += 25
+                if (prediction.p2_driver === p2) simPoints += 18
+                if (prediction.p3_driver === p3) simPoints += 15
+                // Fastest Lap nicht live trackbar
+              }
+            }
+            
+            return {
+              profile: player,
+              prediction,
+              currentPoints: player.total_points || 0,
+              simulatedPoints: simPoints,
+              totalSimulated: (player.total_points || 0) + simPoints
+            }
+          })
+          
+          // Sortieren nach simuliertem Gesamtstand
+          standings.sort((a, b) => b.totalSimulated - a.totalSimulated)
+          setSimulatedStandings(standings)
+        } else {
+          setSimulatedStandings([])
+        }
+        
+      } catch (err) {
+        console.error('Error fetching live simulation:', err)
+      }
+    }
+    
+    fetchLiveSimulation()
+    
+    // Refresh alle 2 Minuten
+    const interval = setInterval(fetchLiveSimulation, 120000)
+    return () => clearInterval(interval)
+  }, [nextRace, allPlayers, allRacePredictions])
+
   const handleRefresh = () => {
     setRefreshing(true)
     fetchData()
@@ -410,6 +502,107 @@ export default function DashboardPage() {
             <div className="text-xs text-gray-500">Ø/Tipp</div>
           </div>
         </div>
+
+        {/* LIVE SIMULATION - Nur wenn Session aktiv */}
+        {liveSessionActive && simulatedStandings.length > 0 && (
+          <div className="mb-6 bg-gradient-to-r from-green-900/30 to-emerald-900/20 rounded-xl border border-green-700/50 overflow-hidden">
+            <div className="p-4 border-b border-green-800/50 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+                <h2 className="font-bold text-green-400 text-lg">
+                  🏎️ LIVE: {liveSessionName}
+                </h2>
+              </div>
+              <span className="text-xs text-gray-500">
+                Simulierte Punkte wenn jetzt Schluss wäre
+              </span>
+            </div>
+            
+            {/* Live Positionen */}
+            {livePositions.length > 0 && (
+              <div className="px-4 py-3 border-b border-green-800/30 bg-black/20">
+                <div className="text-xs text-gray-500 mb-2">AKTUELLE POSITIONEN</div>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {livePositions.slice(0, 6).map((pos, idx) => (
+                    <div key={idx} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg ${
+                      idx === 0 ? 'bg-yellow-500/20 text-yellow-400' :
+                      idx === 1 ? 'bg-gray-500/20 text-gray-300' :
+                      idx === 2 ? 'bg-orange-500/20 text-orange-400' :
+                      'bg-gray-800/50 text-gray-400'
+                    }`}>
+                      <span className="font-bold text-xs">P{pos.position}</span>
+                      <span className="font-medium">{pos.name_acronym || `#${pos.driver_number}`}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Simulierte Rangliste */}
+            <div className="divide-y divide-green-900/30">
+              {simulatedStandings.map((standing, idx) => {
+                const isMe = standing.profile.id === user?.id
+                return (
+                  <div 
+                    key={standing.profile.id}
+                    className={`grid grid-cols-12 gap-2 px-4 py-3 items-center ${
+                      isMe ? 'bg-red-950/30' : 'hover:bg-green-900/10'
+                    } transition-colors`}
+                  >
+                    {/* Rank */}
+                    <div className="col-span-1">
+                      <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                        idx === 0 ? 'bg-yellow-500 text-black' :
+                        idx === 1 ? 'bg-gray-400 text-black' :
+                        idx === 2 ? 'bg-orange-500 text-black' :
+                        'bg-gray-800 text-gray-400'
+                      }`}>
+                        {idx + 1}
+                      </span>
+                    </div>
+                    
+                    {/* Name */}
+                    <div className="col-span-4">
+                      <span className={`font-medium ${isMe ? 'text-red-400' : 'text-white'}`}>
+                        {standing.profile.username}
+                      </span>
+                      {isMe && <span className="text-xs text-gray-500 ml-1">(Du)</span>}
+                    </div>
+                    
+                    {/* Tipp */}
+                    <div className="col-span-3 text-center">
+                      {standing.prediction ? (
+                        <div className="flex items-center justify-center gap-1 text-xs">
+                          <span className="bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded">
+                            {getDriver(standing.prediction.p1_driver || standing.prediction.pole_driver)?.full_name?.split(' ').pop() || '-'}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-600 text-xs">Kein Tipp</span>
+                      )}
+                    </div>
+                    
+                    {/* Sim Punkte */}
+                    <div className="col-span-2 text-center">
+                      <span className={`font-bold ${
+                        standing.simulatedPoints > 0 ? 'text-green-400' : 'text-gray-500'
+                      }`}>
+                        {standing.simulatedPoints > 0 ? `+${standing.simulatedPoints}` : '0'}
+                      </span>
+                    </div>
+                    
+                    {/* Total */}
+                    <div className="col-span-2 text-right">
+                      <span className="text-lg font-bold text-white">
+                        {standing.totalSimulated}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="grid md:grid-cols-3 gap-6">
           {/* Left Column - Alle Tipps */}
