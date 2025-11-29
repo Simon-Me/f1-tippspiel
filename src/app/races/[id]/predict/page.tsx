@@ -437,23 +437,23 @@ export default function PredictPage() {
           {session === 'qualifying' && (
             <>
               <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wide">Pole Position</h2>
-              <DriverCard num={pole} label="Pole Position" target="pole" points={config.points.pole || 10} />
+              <DriverCard num={pole} label="Pole Position" target="pole" points={(config.points as { pole?: number }).pole || 10} />
             </>
           )}
 
           {(session === 'sprint' || session === 'race') && (
             <>
               <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wide">Podium</h2>
-              <DriverCard num={p1} label="1. Platz" target="p1" points={config.points.p1 || 25} />
-              <DriverCard num={p2} label="2. Platz" target="p2" points={config.points.p2 || 18} />
-              <DriverCard num={p3} label="3. Platz" target="p3" points={config.points.p3 || 15} />
+              <DriverCard num={p1} label="1. Platz" target="p1" points={(config.points as { p1?: number }).p1 || 25} />
+              <DriverCard num={p2} label="2. Platz" target="p2" points={(config.points as { p2?: number }).p2 || 18} />
+              <DriverCard num={p3} label="3. Platz" target="p3" points={(config.points as { p3?: number }).p3 || 15} />
             </>
           )}
 
           {session === 'race' && (
             <>
               <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wide mt-8">Bonus</h2>
-              <DriverCard num={fastestLap} label="Schnellste Runde" target="fl" points={config.points.fastestLap || 10} />
+              <DriverCard num={fastestLap} label="Schnellste Runde" target="fl" points={(config.points as { fastestLap?: number }).fastestLap || 10} />
             </>
           )}
         </div>
