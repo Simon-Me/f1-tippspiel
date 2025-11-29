@@ -180,10 +180,10 @@ export default function DashboardPage() {
         }
       }
       
-      const deadline = new Date(nextSession.date.getTime() - 5 * 60 * 1000) // 5 min before
-      const minutesLeft = differenceInMinutes(deadline, now)
-      const hoursLeft = differenceInHours(deadline, now)
-      const daysLeft = differenceInDays(deadline, now)
+      const sessionStart = nextSession.date
+      const minutesLeft = differenceInMinutes(sessionStart, now)
+      const hoursLeft = differenceInHours(sessionStart, now)
+      const daysLeft = differenceInDays(sessionStart, now)
       
       if (minutesLeft <= 0) {
         setTimeLeft('Tippschluss!')

@@ -215,7 +215,7 @@ export default function PredictPage() {
     finally { setSaving(false) }
   }
 
-  // Tippschluss: 5 Minuten vor Session-Start
+  // Tippschluss: Bei Session-Start
   const getDeadline = () => {
     if (!race) return new Date()
     
@@ -223,7 +223,7 @@ export default function PredictPage() {
     if (sessionTimes.length > 0) {
       const sessionInfo = sessionTimes.find(s => s.type === session)
       if (sessionInfo) {
-        return new Date(sessionInfo.date.getTime() - 5 * 60 * 1000)
+        return sessionInfo.date
       }
     }
     
@@ -232,12 +232,11 @@ export default function PredictPage() {
     const qualiDate = race.quali_date ? new Date(race.quali_date) : new Date(raceDate.getTime() - 20 * 60 * 60 * 1000)
     
     if (session === 'qualifying') {
-      return new Date(qualiDate.getTime() - 5 * 60 * 1000)
+      return qualiDate
     } else if (session === 'sprint') {
-      const sprintDate = new Date(raceDate.getTime() - 4 * 60 * 60 * 1000)
-      return new Date(sprintDate.getTime() - 5 * 60 * 1000)
+      return new Date(raceDate.getTime() - 4 * 60 * 60 * 1000)
     } else {
-      return new Date(raceDate.getTime() - 5 * 60 * 1000)
+      return raceDate
     }
   }
   
