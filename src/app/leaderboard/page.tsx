@@ -1,279 +1,436 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import Navbar from '@/components/Navbar'
-import { supabase, Profile } from '@/lib/supabase'
-import { Crown, Trophy, RefreshCw, TrendingUp, Target, Flame } from 'lucide-react'
+import { supabase, Profile, Prediction, Race } from '@/lib/supabase'
+import { getCountryFlag } from '@/lib/images'
+import { Crown, Trophy, RefreshCw, TrendingUp, Target, Zap } from 'lucide-react'
+
+interface Driver {
+  driver_number: number
+  full_name: string
+}
+
+interface LivePosition {
+  position: number
+  driver_number: number
+  name_acronym?: string
+}
+
+interface LiveSession {
+  session_name: string
+  meeting_name: string
+}
 
 export default function LeaderboardPage() {
-  const { user, profile } = useAuth()
+  const { user } = useAuth()
   const [players, setPlayers] = useState<Profile[]>([])
   const [loadingData, setLoadingData] = useState(true)
+  const [drivers, setDrivers] = useState<Driver[]>([])
+  
+  // Current Race & Predictions
+  const [currentRace, setCurrentRace] = useState<Race | null>(null)
+  const [allPredictions, setAllPredictions] = useState<{
+    qualifying: { user: Profile, prediction: Prediction }[]
+    sprint: { user: Profile, prediction: Prediction }[]
+    race: { user: Profile, prediction: Prediction }[]
+  }>({ qualifying: [], sprint: [], race: [] })
+  
+  // Live Simulation
+  const [livePositions, setLivePositions] = useState<LivePosition[]>([])
+  const [liveSession, setLiveSession] = useState<LiveSession | null>(null)
+  const [isLive, setIsLive] = useState(false)
+  const [simulatedStandings, setSimulatedStandings] = useState<{
+    profile: Profile
+    basePoints: number
+    livePoints: number
+    total: number
+  }[]>([])
 
-  useEffect(() => {
-    async function fetchLeaderboard() {
-      try {
-        const { data } = await supabase
-          .from('profiles')
+  // Daten laden
+  const fetchData = useCallback(async () => {
+    try {
+      // Spieler
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('total_points', { ascending: false })
+      
+      if (profilesData) setPlayers(profilesData)
+      
+      // Fahrer
+      const driversRes = await fetch('/api/drivers')
+      const driversJson = await driversRes.json()
+      if (driversJson.drivers) setDrivers(driversJson.drivers)
+      
+      // Aktuelles Rennen
+      const { data: races } = await supabase
+        .from('races')
+        .select('*')
+        .eq('season', 2025)
+        .gte('race_date', new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()) // 2 Tage zurück
+        .order('race_date', { ascending: true })
+        .limit(1)
+      
+      if (races && races.length > 0) {
+        const race = races[0]
+        setCurrentRace(race)
+        
+        // Alle Predictions für dieses Rennen
+        const { data: preds } = await supabase
+          .from('predictions')
           .select('*')
-          .order('total_points', { ascending: false })
-          .limit(100)
-        if (data) setPlayers(data)
-      } catch (e) { console.error('Leaderboard error:', e) }
-      finally { setLoadingData(false) }
+          .eq('race_id', race.id)
+        
+        if (preds && profilesData) {
+          const grouped = {
+            qualifying: [] as { user: Profile, prediction: Prediction }[],
+            sprint: [] as { user: Profile, prediction: Prediction }[],
+            race: [] as { user: Profile, prediction: Prediction }[]
+          }
+          
+          preds.forEach(pred => {
+            const userProfile = profilesData.find(p => p.id === pred.user_id)
+            if (userProfile && grouped[pred.session_type as keyof typeof grouped]) {
+              grouped[pred.session_type as keyof typeof grouped].push({
+                user: userProfile,
+                prediction: pred
+              })
+            }
+          })
+          
+          setAllPredictions(grouped)
+        }
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoadingData(false)
     }
-    fetchLeaderboard()
   }, [])
 
+  // Live-Positionen laden
+  const fetchLive = useCallback(async () => {
+    try {
+      const res = await fetch('/api/live-positions')
+      if (!res.ok) return
+      
+      const data = await res.json()
+      setLivePositions(data.positions || [])
+      setLiveSession(data.sessionInfo)
+      setIsLive(data.isActive || false)
+      
+      // Simulierte Punkte berechnen wenn live
+      if (data.isActive && data.positions?.length > 0 && players.length > 0) {
+        const positions = data.positions as LivePosition[]
+        const p1 = positions[0]?.driver_number || 0
+        const p2 = positions[1]?.driver_number || 0
+        const p3 = positions[2]?.driver_number || 0
+        
+        // Session-Typ bestimmen
+        const sessionName = (data.sessionInfo?.session_name || '').toLowerCase()
+        let sessionType: 'qualifying' | 'sprint' | 'race' = 'race'
+        if (sessionName.includes('quali')) sessionType = 'qualifying'
+        else if (sessionName.includes('sprint') && !sessionName.includes('quali')) sessionType = 'sprint'
+        
+        const predictions = allPredictions[sessionType] || []
+        
+        const standings = players.map(player => {
+          const playerPred = predictions.find(p => p.user.id === player.id)
+          let livePoints = 0
+          
+          if (playerPred) {
+            const pred = playerPred.prediction
+            if (sessionType === 'qualifying') {
+              if (pred.pole_driver === p1) livePoints = 10
+            } else if (sessionType === 'sprint') {
+              if (pred.p1_driver === p1) livePoints += 15
+              if (pred.p2_driver === p2) livePoints += 10
+              if (pred.p3_driver === p3) livePoints += 5
+            } else {
+              if (pred.p1_driver === p1) livePoints += 25
+              if (pred.p2_driver === p2) livePoints += 18
+              if (pred.p3_driver === p3) livePoints += 15
+            }
+          }
+          
+          return {
+            profile: player,
+            basePoints: player.total_points || 0,
+            livePoints,
+            total: (player.total_points || 0) + livePoints
+          }
+        }).sort((a, b) => b.total - a.total)
+        
+        setSimulatedStandings(standings)
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }, [players, allPredictions])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  useEffect(() => {
+    fetchLive()
+    const interval = setInterval(fetchLive, 120000) // Alle 2 Min
+    return () => clearInterval(interval)
+  }, [fetchLive])
+
+  const getDriverName = (num?: number | null) => {
+    if (!num) return '-'
+    const driver = drivers.find(d => d.driver_number === num)
+    return driver?.full_name?.split(' ').pop() || `#${num}`
+  }
+
   if (loadingData) {
-    return <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-      <RefreshCw className="w-8 h-8 text-red-600 animate-spin" />
-    </div>
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <RefreshCw className="w-8 h-8 text-red-600 animate-spin" />
+      </div>
+    )
   }
 
   const userRank = user ? players.findIndex(p => p.id === user?.id) + 1 : 0
-  const totalPoints = players.reduce((sum, p) => sum + (p.total_points || 0), 0)
-  const totalPredictions = players.reduce((sum, p) => sum + (p.predictions_count || 0), 0)
-  const leader = players[0]
-  const avgPointsPerPlayer = players.length > 0 ? Math.round(totalPoints / players.length) : 0
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
       <Navbar />
       
-      <main className="pt-20 pb-12 px-4 max-w-4xl mx-auto">
-        <div className="flex items-center gap-3 mb-2">
+      <main className="pt-20 pb-12 px-4 max-w-5xl mx-auto">
+        <div className="flex items-center gap-3 mb-6">
           <Crown className="w-8 h-8 text-yellow-500" />
           <h1 className="text-2xl font-bold text-white">Rangliste</h1>
         </div>
-        <p className="text-gray-500 text-sm mb-8">F1-Nasen Saison 2025</p>
 
-        {/* Podium für Top 3 */}
+        {/* LIVE SIMULATION */}
+        {isLive && simulatedStandings.length > 0 && (
+          <div className="mb-8 bg-gradient-to-r from-green-900/30 to-emerald-900/20 rounded-xl border border-green-700/50 overflow-hidden">
+            <div className="p-4 border-b border-green-800/50 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+                <h2 className="font-bold text-green-400">
+                  🏎️ LIVE: {liveSession?.session_name}
+                </h2>
+              </div>
+              <span className="text-xs text-gray-500">Simulierte Punkte</span>
+            </div>
+            
+            {/* Live Positionen */}
+            <div className="px-4 py-3 border-b border-green-800/30 bg-black/20">
+              <div className="flex gap-2 overflow-x-auto">
+                {livePositions.slice(0, 6).map((pos, idx) => (
+                  <div key={idx} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-sm ${
+                    idx === 0 ? 'bg-yellow-500/20 text-yellow-400' :
+                    idx === 1 ? 'bg-gray-500/20 text-gray-300' :
+                    idx === 2 ? 'bg-orange-500/20 text-orange-400' :
+                    'bg-gray-800/50 text-gray-400'
+                  }`}>
+                    <span className="font-bold">P{pos.position}</span>
+                    <span>{pos.name_acronym || `#${pos.driver_number}`}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Live Rangliste */}
+            <div className="divide-y divide-green-900/30">
+              {simulatedStandings.slice(0, 10).map((standing, idx) => {
+                const isMe = standing.profile.id === user?.id
+                return (
+                  <div key={standing.profile.id} className={`flex items-center justify-between px-4 py-3 ${isMe ? 'bg-red-950/30' : ''}`}>
+                    <div className="flex items-center gap-3">
+                      <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                        idx === 0 ? 'bg-yellow-500 text-black' :
+                        idx === 1 ? 'bg-gray-400 text-black' :
+                        idx === 2 ? 'bg-orange-500 text-black' :
+                        'bg-gray-800 text-gray-400'
+                      }`}>
+                        {idx + 1}
+                      </span>
+                      <span className={`font-medium ${isMe ? 'text-red-400' : 'text-white'}`}>
+                        {standing.profile.username}
+                        {isMe && <span className="text-gray-500 ml-1">(Du)</span>}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className={`text-sm ${standing.livePoints > 0 ? 'text-green-400' : 'text-gray-600'}`}>
+                        {standing.livePoints > 0 ? `+${standing.livePoints}` : '+0'}
+                      </span>
+                      <span className="font-bold text-white text-lg">{standing.total}</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Podium */}
         {players.length >= 3 && (
           <div className="flex items-end justify-center gap-2 mb-8">
             {/* 2. Platz */}
             <div className="flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 flex items-center justify-center text-2xl font-bold text-black mb-2">
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 flex items-center justify-center text-xl font-bold text-black mb-2">
                 {players[1].username.charAt(0).toUpperCase()}
               </div>
-              <div className="text-gray-300 font-medium text-sm truncate max-w-20">{players[1].username}</div>
+              <div className="text-gray-300 font-medium text-sm truncate max-w-16">{players[1].username}</div>
               <div className="text-gray-400 text-xs">{players[1].total_points} Pkt</div>
-              <div className="w-20 h-16 bg-gradient-to-t from-gray-600 to-gray-500 rounded-t-lg mt-2 flex items-center justify-center">
-                <span className="text-2xl font-bold text-white">2</span>
+              <div className="w-16 h-14 bg-gradient-to-t from-gray-600 to-gray-500 rounded-t-lg mt-2 flex items-center justify-center">
+                <span className="text-xl font-bold text-white">2</span>
               </div>
             </div>
             
             {/* 1. Platz */}
             <div className="flex flex-col items-center -mt-4">
               <div className="relative">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-3xl font-bold text-black mb-2">
+                <div className="w-18 h-18 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-2xl font-bold text-black mb-2" style={{width: '4.5rem', height: '4.5rem'}}>
                   {players[0].username.charAt(0).toUpperCase()}
                 </div>
-                <Crown className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-8 text-yellow-400" />
+                <Crown className="absolute -top-2 left-1/2 -translate-x-1/2 w-6 h-6 text-yellow-400" />
               </div>
-              <div className="text-yellow-400 font-bold truncate max-w-24">{players[0].username}</div>
+              <div className="text-yellow-400 font-bold truncate max-w-20">{players[0].username}</div>
               <div className="text-yellow-500 text-sm font-medium">{players[0].total_points} Pkt</div>
-              <div className="w-24 h-24 bg-gradient-to-t from-yellow-600 to-yellow-500 rounded-t-lg mt-2 flex items-center justify-center">
-                <span className="text-3xl font-bold text-black">1</span>
+              <div className="w-20 h-20 bg-gradient-to-t from-yellow-600 to-yellow-500 rounded-t-lg mt-2 flex items-center justify-center">
+                <span className="text-2xl font-bold text-black">1</span>
               </div>
             </div>
             
             {/* 3. Platz */}
             <div className="flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-2xl font-bold text-black mb-2">
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-xl font-bold text-black mb-2">
                 {players[2].username.charAt(0).toUpperCase()}
               </div>
-              <div className="text-orange-400 font-medium text-sm truncate max-w-20">{players[2].username}</div>
+              <div className="text-orange-400 font-medium text-sm truncate max-w-16">{players[2].username}</div>
               <div className="text-orange-500 text-xs">{players[2].total_points} Pkt</div>
-              <div className="w-20 h-12 bg-gradient-to-t from-orange-700 to-orange-600 rounded-t-lg mt-2 flex items-center justify-center">
-                <span className="text-2xl font-bold text-white">3</span>
+              <div className="w-16 h-10 bg-gradient-to-t from-orange-700 to-orange-600 rounded-t-lg mt-2 flex items-center justify-center">
+                <span className="text-xl font-bold text-white">3</span>
               </div>
             </div>
           </div>
         )}
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          <div className="bg-[#111] rounded-xl p-4 border border-gray-800">
-            <div className="flex items-center gap-2 mb-1">
-              <Trophy className="w-4 h-4 text-yellow-500" />
-              <span className="text-xs text-gray-500">Gesamtpunkte</span>
-            </div>
-            <div className="text-2xl font-bold text-white">{totalPoints}</div>
-          </div>
-          
-          <div className="bg-[#111] rounded-xl p-4 border border-gray-800">
-            <div className="flex items-center gap-2 mb-1">
-              <Target className="w-4 h-4 text-blue-500" />
-              <span className="text-xs text-gray-500">Tipps gesamt</span>
-            </div>
-            <div className="text-2xl font-bold text-white">{totalPredictions}</div>
-          </div>
-          
-          <div className="bg-[#111] rounded-xl p-4 border border-gray-800">
-            <div className="flex items-center gap-2 mb-1">
-              <TrendingUp className="w-4 h-4 text-green-500" />
-              <span className="text-xs text-gray-500">Ø pro Spieler</span>
-            </div>
-            <div className="text-2xl font-bold text-white">{avgPointsPerPlayer}</div>
-          </div>
-          
-          <div className="bg-[#111] rounded-xl p-4 border border-gray-800">
-            <div className="flex items-center gap-2 mb-1">
-              <Flame className="w-4 h-4 text-red-500" />
-              <span className="text-xs text-gray-500">Führender</span>
-            </div>
-            <div className="text-lg font-bold text-yellow-400 truncate">{leader?.username || '-'}</div>
-          </div>
-        </div>
-
-        {/* User Position */}
-        {profile && userRank > 0 && (
-          <div className="bg-gradient-to-r from-red-950 to-red-900/30 border border-red-800/50 rounded-xl p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center text-xl font-bold">
-                  {profile.username.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <div className="text-xs text-gray-400 uppercase">Deine Position</div>
-                  <div className="text-white font-bold text-lg">{profile.username}</div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-4xl font-bold text-red-500">#{userRank}</div>
-                <div className="text-sm text-gray-400">{profile.total_points} Punkte</div>
-              </div>
-            </div>
-            {userRank > 1 && (
-              <div className="mt-3 pt-3 border-t border-red-800/30 text-sm text-gray-400">
-                {players[userRank - 2].total_points - profile.total_points} Punkte Rückstand auf Platz {userRank - 1}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Not logged in hint */}
-        {!user && (
-          <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="text-gray-400 text-sm">
-                <Link href="/login" className="text-red-500 hover:underline">Einloggen</Link> um mitzutippen!
-              </div>
-              <Link href="/register" className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700">
-                Registrieren
-              </Link>
-            </div>
-          </div>
-        )}
-
-        {/* Leaderboard Table */}
-        <div className="bg-[#111] rounded-xl overflow-hidden border border-gray-800">
-          <div className="p-4 border-b border-gray-800 bg-[#0a0a0a]">
-            <h2 className="font-bold text-white">Alle Spieler</h2>
-          </div>
-          
-          {/* Header */}
-          <div className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-gray-800 text-xs text-gray-500 font-medium">
-            <div className="col-span-1">#</div>
-            <div className="col-span-5">Spieler</div>
-            <div className="col-span-2 text-center">Tipps</div>
-            <div className="col-span-2 text-center">Ø/Tipp</div>
-            <div className="col-span-2 text-right">Punkte</div>
+        {/* Alle Spieler Tabelle */}
+        <div className="bg-[#111] rounded-xl overflow-hidden border border-gray-800 mb-8">
+          <div className="p-4 border-b border-gray-800">
+            <h2 className="font-bold text-white flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-yellow-500" />
+              Alle Spieler
+            </h2>
           </div>
           
           <div className="divide-y divide-gray-800/50">
-            {players.map((player, index) => {
-              const position = index + 1
-              const isCurrentUser = player.id === user?.id
-              const avgPerTip = player.predictions_count && player.predictions_count > 0
-                ? (player.total_points / player.predictions_count).toFixed(1)
-                : '0'
-              const pointsToNext = index > 0 
-                ? players[index - 1].total_points - player.total_points 
-                : 0
-
+            {players.map((player, idx) => {
+              const isMe = player.id === user?.id
               return (
-                <div
-                  key={player.id}
-                  className={`grid grid-cols-12 gap-2 px-4 py-3 items-center ${
-                    isCurrentUser ? 'bg-red-950/30' : 'hover:bg-[#1a1a1a]'
-                  } transition-colors`}
-                >
-                  {/* Position */}
-                  <div className="col-span-1">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                      position === 1 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 text-black' :
-                      position === 2 ? 'bg-gradient-to-br from-gray-300 to-gray-500 text-black' :
-                      position === 3 ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-black' :
+                <div key={player.id} className={`flex items-center justify-between px-4 py-3 ${isMe ? 'bg-red-950/30' : 'hover:bg-[#1a1a1a]'}`}>
+                  <div className="flex items-center gap-3">
+                    <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                      idx === 0 ? 'bg-yellow-500 text-black' :
+                      idx === 1 ? 'bg-gray-400 text-black' :
+                      idx === 2 ? 'bg-orange-500 text-black' :
                       'bg-gray-800 text-gray-400'
                     }`}>
-                      {position}
-                    </div>
-                  </div>
-
-                  {/* Avatar + Name */}
-                  <div className="col-span-5 flex items-center gap-3 min-w-0">
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${
-                      isCurrentUser ? 'bg-gradient-to-br from-red-600 to-red-800' : 'bg-gradient-to-br from-gray-700 to-gray-800'
-                    }`}>
-                      {player.username.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <div className={`font-medium truncate ${isCurrentUser ? 'text-red-400' : 'text-white'}`}>
+                      {idx + 1}
+                    </span>
+                    <div>
+                      <span className={`font-medium ${isMe ? 'text-red-400' : 'text-white'}`}>
                         {player.username}
-                        {isCurrentUser && <span className="text-xs text-gray-500 ml-1">(Du)</span>}
-                      </div>
-                      {pointsToNext > 0 && (
-                        <div className="text-[10px] text-gray-600">-{pointsToNext} zu #{position - 1}</div>
-                      )}
+                      </span>
+                      {isMe && <span className="text-gray-500 text-sm ml-2">(Du)</span>}
                     </div>
                   </div>
-
-                  {/* Predictions Count */}
-                  <div className="col-span-2 text-center text-gray-400">
-                    {player.predictions_count || 0}
-                  </div>
-
-                  {/* Average */}
-                  <div className="col-span-2 text-center">
-                    <span className={`text-sm ${
-                      parseFloat(avgPerTip) >= 10 ? 'text-green-400' :
-                      parseFloat(avgPerTip) >= 5 ? 'text-yellow-400' :
-                      'text-gray-400'
-                    }`}>
-                      {avgPerTip}
-                    </span>
-                  </div>
-
-                  {/* Points */}
-                  <div className="col-span-2 text-right">
-                    <span className={`text-lg font-bold ${
-                      position === 1 ? 'text-yellow-400' :
-                      position === 2 ? 'text-gray-300' :
-                      position === 3 ? 'text-orange-400' :
-                      'text-white'
-                    }`}>
-                      {player.total_points || 0}
-                    </span>
+                  <div className="flex items-center gap-6">
+                    <span className="text-gray-500 text-sm">{player.predictions_count || 0} Tipps</span>
+                    <span className="font-bold text-white text-lg">{player.total_points || 0}</span>
                   </div>
                 </div>
               )
             })}
           </div>
-
-          {players.length === 0 && (
-            <div className="p-12 text-center text-gray-500">
-              <Trophy className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p>Noch keine Spieler registriert</p>
-              <Link href="/register" className="inline-block mt-4 px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700">
-                Erster sein!
-              </Link>
-            </div>
-          )}
         </div>
+
+        {/* Alle Tipps für aktuelles Rennen */}
+        {currentRace && (allPredictions.qualifying.length > 0 || allPredictions.sprint.length > 0 || allPredictions.race.length > 0) && (
+          <div className="bg-[#111] rounded-xl overflow-hidden border border-gray-800">
+            <div className="p-4 border-b border-gray-800">
+              <h2 className="font-bold text-white flex items-center gap-2">
+                <Target className="w-5 h-5 text-blue-500" />
+                {getCountryFlag(currentRace.race_name)} Tipps: {currentRace.race_name}
+              </h2>
+            </div>
+            
+            <div className="p-4 space-y-6">
+              {/* Qualifying */}
+              {allPredictions.qualifying.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-bold text-gray-400 mb-3">QUALIFYING - Pole</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {allPredictions.qualifying.map(({ user: u, prediction }) => (
+                      <div key={u.id} className={`px-3 py-2 rounded-lg ${u.id === user?.id ? 'bg-red-900/30 border border-red-700' : 'bg-gray-800'}`}>
+                        <span className="text-gray-400 text-sm">{u.username}: </span>
+                        <span className="text-blue-400 font-bold">{getDriverName(prediction.pole_driver)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Sprint */}
+              {allPredictions.sprint.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-bold text-gray-400 mb-3">SPRINT - Podium</h3>
+                  <div className="space-y-2">
+                    {allPredictions.sprint.map(({ user: u, prediction }) => (
+                      <div key={u.id} className={`px-3 py-2 rounded-lg flex items-center justify-between ${u.id === user?.id ? 'bg-red-900/30 border border-red-700' : 'bg-gray-800'}`}>
+                        <span className="text-gray-400 text-sm">{u.username}</span>
+                        <div className="flex gap-2">
+                          <span className="text-yellow-400 font-bold">{getDriverName(prediction.p1_driver)}</span>
+                          <span className="text-gray-500">-</span>
+                          <span className="text-gray-300 font-bold">{getDriverName(prediction.p2_driver)}</span>
+                          <span className="text-gray-500">-</span>
+                          <span className="text-orange-400 font-bold">{getDriverName(prediction.p3_driver)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Race */}
+              {allPredictions.race.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-bold text-gray-400 mb-3">RENNEN - Podium & Fastest Lap</h3>
+                  <div className="space-y-2">
+                    {allPredictions.race.map(({ user: u, prediction }) => (
+                      <div key={u.id} className={`px-3 py-2 rounded-lg flex items-center justify-between ${u.id === user?.id ? 'bg-red-900/30 border border-red-700' : 'bg-gray-800'}`}>
+                        <span className="text-gray-400 text-sm">{u.username}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-yellow-400 font-bold">{getDriverName(prediction.p1_driver)}</span>
+                          <span className="text-gray-500">-</span>
+                          <span className="text-gray-300 font-bold">{getDriverName(prediction.p2_driver)}</span>
+                          <span className="text-gray-500">-</span>
+                          <span className="text-orange-400 font-bold">{getDriverName(prediction.p3_driver)}</span>
+                          {prediction.fastest_lap_driver && (
+                            <>
+                              <span className="text-gray-600 mx-1">|</span>
+                              <Zap className="w-3 h-3 text-purple-400" />
+                              <span className="text-purple-400 text-sm">{getDriverName(prediction.fastest_lap_driver)}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )
