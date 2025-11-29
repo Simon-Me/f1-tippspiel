@@ -80,6 +80,10 @@ export default function DashboardPage() {
     simulatedPoints: number
     totalSimulated: number
   }[]>([])
+  
+  // Auto Points Calculation
+  const [pointsStatus, setPointsStatus] = useState<'idle' | 'pending' | 'calculating' | 'done'>('idle')
+  const [pointsMessage, setPointsMessage] = useState<string>('')
 
   useEffect(() => {
     if (!loading && !user) router.push('/login')
@@ -311,6 +315,102 @@ export default function DashboardPage() {
     return () => clearInterval(interval)
   }, [user])
 
+  // Automatische Punkteberechnung nach Session-Ende
+  useEffect(() => {
+    const checkAndCalculatePoints = async () => {
+      if (!nextRace) return
+      
+      const now = new Date()
+      const raceDate = new Date(nextRace.race_date)
+      
+      // Prüfe ob wir im Zeitfenster sind (Session könnte gerade beendet sein)
+      // Nur checken wenn Renntag oder Tag davor (Sprint-Wochenende)
+      const timeDiff = raceDate.getTime() - now.getTime()
+      const hoursDiff = timeDiff / (1000 * 60 * 60)
+      
+      // Wenn mehr als 2 Tage weg, nicht checken
+      if (hoursDiff > 48 || hoursDiff < -6) return
+      
+      // Wenn Session gerade läuft, nicht checken
+      if (liveSessionActive) return
+      
+      try {
+        // Checke ob Ergebnisse verfügbar sind
+        const [qualiRes, sprintRes, raceRes] = await Promise.all([
+          fetch(`https://api.jolpi.ca/ergast/f1/2025/${nextRace.round}/qualifying/`),
+          nextRace.is_sprint ? fetch(`https://api.jolpi.ca/ergast/f1/2025/${nextRace.round}/sprint/`) : null,
+          fetch(`https://api.jolpi.ca/ergast/f1/2025/${nextRace.round}/results/`)
+        ])
+        
+        const qualiData = await qualiRes.json()
+        const sprintData = sprintRes ? await sprintRes.json() : null
+        const raceData = await raceRes.json()
+        
+        const hasQuali = (qualiData.MRData?.RaceTable?.Races?.[0]?.QualifyingResults?.length || 0) > 0
+        const hasSprint = sprintData ? (sprintData.MRData?.RaceTable?.Races?.[0]?.SprintResults?.length || 0) > 0 : false
+        const hasRace = (raceData.MRData?.RaceTable?.Races?.[0]?.Results?.length || 0) > 0
+        
+        // Wenn Session vorbei aber keine Ergebnisse
+        if (hoursDiff < 0 && !hasRace) {
+          setPointsStatus('pending')
+          setPointsMessage('Rennen vorbei - Punkte werden berechnet sobald Ergebnisse verfügbar sind...')
+          return
+        }
+        
+        // Wenn Ergebnisse da, automatisch berechnen
+        if (hasQuali || hasSprint || hasRace) {
+          // Check ob Punkte schon berechnet wurden für dieses Rennen
+          const { data: existingPreds } = await supabase
+            .from('predictions')
+            .select('points_earned')
+            .eq('race_id', nextRace.id)
+            .not('points_earned', 'is', null)
+            .limit(1)
+          
+          // Wenn noch keine Punkte vergeben wurden, berechnen
+          const needsCalculation = !existingPreds || existingPreds.length === 0 || existingPreds[0].points_earned === 0
+          
+          if (needsCalculation && (hasQuali || hasSprint || hasRace)) {
+            setPointsStatus('calculating')
+            setPointsMessage('Ergebnisse verfügbar - Punkte werden berechnet...')
+            
+            const calcRes = await fetch('/api/calculate-points', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sessionType: 'all', round: nextRace.round })
+            })
+            
+            const calcData = await calcRes.json()
+            
+            if (calcData.success) {
+              setPointsStatus('done')
+              const parts = []
+              if (calcData.results?.qualifying) parts.push(`Quali ✓`)
+              if (calcData.results?.sprint) parts.push(`Sprint ✓`)
+              if (calcData.results?.race) parts.push(`Rennen ✓`)
+              setPointsMessage(`Punkte berechnet: ${parts.join(', ')}`)
+              
+              // Daten neu laden
+              fetchData()
+            } else {
+              setPointsStatus('idle')
+            }
+          } else {
+            setPointsStatus('idle')
+          }
+        }
+      } catch (err) {
+        console.error('Auto points check error:', err)
+      }
+    }
+    
+    checkAndCalculatePoints()
+    
+    // Alle 2 Minuten checken
+    const interval = setInterval(checkAndCalculatePoints, 120000)
+    return () => clearInterval(interval)
+  }, [nextRace, liveSessionActive])
+
   // Live-Simulation: Holt OpenF1 Positionen und berechnet simulierte Punktestände
   useEffect(() => {
     const fetchLiveSimulation = async () => {
@@ -446,6 +546,32 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Points Status Banner */}
+        {pointsStatus !== 'idle' && pointsMessage && (
+          <div className={`mb-4 p-4 rounded-xl flex items-center gap-3 ${
+            pointsStatus === 'pending' ? 'bg-yellow-900/30 border border-yellow-700/50' :
+            pointsStatus === 'calculating' ? 'bg-blue-900/30 border border-blue-700/50' :
+            'bg-green-900/30 border border-green-700/50'
+          }`}>
+            {pointsStatus === 'calculating' && (
+              <RefreshCw className="w-5 h-5 text-blue-400 animate-spin" />
+            )}
+            {pointsStatus === 'pending' && (
+              <Clock className="w-5 h-5 text-yellow-400" />
+            )}
+            {pointsStatus === 'done' && (
+              <Trophy className="w-5 h-5 text-green-400" />
+            )}
+            <span className={`text-sm ${
+              pointsStatus === 'pending' ? 'text-yellow-400' :
+              pointsStatus === 'calculating' ? 'text-blue-400' :
+              'text-green-400'
+            }`}>
+              {pointsMessage}
+            </span>
           </div>
         )}
 
