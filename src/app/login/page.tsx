@@ -25,7 +25,10 @@ export default function LoginPage() {
       setError(error.message || 'Login fehlgeschlagen')
       setLoading(false)
     } else {
+      // Warte kurz damit Auth-State sich aktualisiert
+      await new Promise(r => setTimeout(r, 500))
       router.push('/dashboard')
+      router.refresh()
     }
   }
 
