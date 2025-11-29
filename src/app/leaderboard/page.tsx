@@ -5,27 +5,58 @@ import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import Navbar from '@/components/Navbar'
 import { supabase, Profile } from '@/lib/supabase'
-import { Crown, Trophy, RefreshCw, TrendingUp, Target, Flame, Award } from 'lucide-react'
+import { Crown, Trophy, RefreshCw, TrendingUp, Target, Flame, Calculator } from 'lucide-react'
 
 export default function LeaderboardPage() {
   const { user, profile } = useAuth()
   const [players, setPlayers] = useState<Profile[]>([])
   const [loadingData, setLoadingData] = useState(true)
+  const [calculating, setCalculating] = useState(false)
+  const [calcResult, setCalcResult] = useState<string | null>(null)
+
+  const fetchLeaderboard = async () => {
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('total_points', { ascending: false })
+        .limit(100)
+      if (data) setPlayers(data)
+    } catch (e) { console.error('Leaderboard error:', e) }
+    finally { setLoadingData(false) }
+  }
 
   useEffect(() => {
-    async function fetchLeaderboard() {
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .order('total_points', { ascending: false })
-          .limit(100)
-        if (data) setPlayers(data)
-      } catch (e) { console.error('Leaderboard error:', e) }
-      finally { setLoadingData(false) }
-    }
     fetchLeaderboard()
   }, [])
+
+  const calculatePoints = async () => {
+    setCalculating(true)
+    setCalcResult(null)
+    try {
+      const res = await fetch('/api/calculate-points', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionType: 'all' })
+      })
+      const data = await res.json()
+      
+      if (data.success) {
+        const parts = []
+        if (data.results?.qualifying) parts.push(`Quali: Pole ${data.results.qualifying.pole}`)
+        if (data.results?.sprint) parts.push(`Sprint: ${data.results.sprint.p1}-${data.results.sprint.p2}-${data.results.sprint.p3}`)
+        if (data.results?.race) parts.push(`Rennen: ${data.results.race.p1}-${data.results.race.p2}-${data.results.race.p3}`)
+        setCalcResult(`✅ ${data.raceName} - ${parts.join(' | ')}`)
+        fetchLeaderboard()
+      } else {
+        setCalcResult(`❌ ${data.error || 'Fehler'}`)
+      }
+    } catch (e) {
+      setCalcResult('❌ Fehler beim Berechnen')
+    } finally {
+      setCalculating(false)
+    }
+  }
 
   if (loadingData) {
     return <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
@@ -44,11 +75,30 @@ export default function LeaderboardPage() {
       <Navbar />
       
       <main className="pt-20 pb-12 px-4 max-w-4xl mx-auto">
-        <div className="flex items-center gap-3 mb-2">
-          <Crown className="w-8 h-8 text-yellow-500" />
-          <h1 className="text-2xl font-bold text-white">Rangliste</h1>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <Crown className="w-8 h-8 text-yellow-500" />
+            <h1 className="text-2xl font-bold text-white">Rangliste</h1>
+          </div>
+          <button
+            onClick={calculatePoints}
+            disabled={calculating}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded-lg text-sm font-medium transition-colors"
+          >
+            {calculating ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <Calculator className="w-4 h-4" />
+            )}
+            {calculating ? 'Berechne...' : 'Punkte aktualisieren'}
+          </button>
         </div>
-        <p className="text-gray-500 text-sm mb-8">F1-Nasen Saison 2025</p>
+        <p className="text-gray-500 text-sm mb-2">F1-Nasen Saison 2025</p>
+        {calcResult && (
+          <div className={`text-sm mb-4 p-3 rounded-lg ${calcResult.startsWith('✅') ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'}`}>
+            {calcResult}
+          </div>
+        )}
 
         {/* Podium für Top 3 */}
         {players.length >= 3 && (
