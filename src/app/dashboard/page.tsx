@@ -65,10 +65,10 @@ export default function DashboardPage() {
             .eq('user_id', user.id)
             .eq('race_id', races[0].id)
           
-          const hasQuali = preds?.some(p => p.session_type === 'qualifying')
-          const hasSprint = races[0].is_sprint ? preds?.some(p => p.session_type === 'sprint') : true
-          const hasRace = preds?.some(p => p.session_type === 'race')
-          setHasAllTips(!!hasQuali && hasSprint && !!hasRace)
+          const hasQuali = preds?.some(p => p.session_type === 'qualifying') ?? false
+          const hasSprint = races[0].is_sprint ? (preds?.some(p => p.session_type === 'sprint') ?? false) : true
+          const hasRace = preds?.some(p => p.session_type === 'race') ?? false
+          setHasAllTips(hasQuali && hasSprint && hasRace)
         }
         
         // Alle Spieler für Ranking
