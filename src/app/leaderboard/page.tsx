@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import Navbar from '@/components/Navbar'
 import { supabase, Profile, Race } from '@/lib/supabase'
 import { getCountryFlag } from '@/lib/images'
-import { Trophy, Crown, Loader2, Check, X } from 'lucide-react'
+import { Trophy, Crown, Loader2, Check, X, ExternalLink } from 'lucide-react'
 
 interface Driver {
   driver_number: number
@@ -295,9 +296,10 @@ export default function LeaderboardPage() {
             {players.map((player, idx) => {
               const isMe = player.id === user?.id
               return (
-                <div 
+                <Link
+                  href={isMe ? '/profile' : `/player/${player.id}`}
                   key={player.id} 
-                  className={`flex items-center justify-between p-4 border-b border-zinc-800 last:border-0 ${isMe ? 'bg-red-950/30' : ''}`}
+                  className={`flex items-center justify-between p-4 border-b border-zinc-800 last:border-0 hover:bg-zinc-800/50 transition-colors ${isMe ? 'bg-red-950/30' : ''}`}
                 >
                   <div className="flex items-center gap-4">
                     <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
@@ -309,14 +311,15 @@ export default function LeaderboardPage() {
                       {idx + 1}
                     </span>
                     <div>
-                      <p className={isMe ? 'text-red-400 font-medium' : 'text-white font-medium'}>
+                      <p className={`flex items-center gap-1 ${isMe ? 'text-red-400 font-medium' : 'text-white font-medium'}`}>
                         {player.username}
+                        <ExternalLink className="w-3 h-3 text-gray-500" />
                       </p>
                       <p className="text-gray-600 text-sm">{player.predictions_count || 0} Tipps</p>
                     </div>
                   </div>
                   <span className="text-2xl font-bold">{player.total_points}</span>
-                </div>
+                </Link>
               )
             })}
           </div>

@@ -11,8 +11,30 @@ export interface Profile {
   username: string
   avatar_url?: string
   total_points: number
+  coins: number
   predictions_count?: number
   created_at: string
+}
+
+export interface ShopItem {
+  id: string
+  name: string
+  description: string
+  category: 'helmet' | 'car' | 'trophy' | 'badge' | 'special'
+  price: number
+  rarity: 'common' | 'rare' | 'epic' | 'legendary'
+  image_url: string
+  team?: string
+  driver?: string
+  available: boolean
+}
+
+export interface UserItem {
+  id: string
+  user_id: string
+  item_id: string
+  purchased_at: string
+  equipped: boolean
 }
 
 export interface Race {

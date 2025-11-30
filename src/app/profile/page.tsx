@@ -19,8 +19,12 @@ import {
   Medal,
   Rocket,
   Eye,
-  Lock
+  Lock,
+  Coins,
+  ShoppingBag
 } from 'lucide-react'
+import { SHOP_ITEMS, RARITY_COLORS, CATEGORY_LABELS } from '@/lib/shopItems'
+import { ShopItem } from '@/lib/supabase'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 
@@ -45,6 +49,8 @@ export default function ProfilePage() {
   const [predictions, setPredictions] = useState<PredictionWithRace[]>([])
   const [drivers, setDrivers] = useState<Driver[]>([])
   const [allPlayers, setAllPlayers] = useState<Profile[]>([])
+  const [coins, setCoins] = useState(0)
+  const [ownedItems, setOwnedItems] = useState<ShopItem[]>([])
   const [stats, setStats] = useState({
     totalPredictions: 0,
     totalPoints: 0,
@@ -78,6 +84,28 @@ export default function ProfilePage() {
           }
         } catch (e) {
           console.error('Error loading drivers from API:', e)
+        }
+
+        // Coins laden
+        const { data: profileCoins } = await supabase
+          .from('profiles')
+          .select('coins')
+          .eq('id', user.id)
+          .single()
+        
+        if (profileCoins) setCoins(profileCoins.coins || 0)
+
+        // Gekaufte Items laden
+        const { data: userItems } = await supabase
+          .from('user_items')
+          .select('item_id')
+          .eq('user_id', user.id)
+        
+        if (userItems) {
+          const owned = userItems
+            .map(ui => SHOP_ITEMS.find(item => item.id === ui.item_id))
+            .filter((item): item is ShopItem => item !== undefined)
+          setOwnedItems(owned)
         }
 
         // Alle Spieler für Ranking
@@ -307,8 +335,20 @@ export default function ProfilePage() {
               </div>
             </div>
             <div className="text-center">
-              <div className="text-5xl font-bold text-red-500">{profile?.total_points || 0}</div>
-              <div className="text-gray-500 text-sm">Gesamtpunkte</div>
+              <div className="flex items-center gap-4 justify-center">
+                <div>
+                  <div className="text-4xl font-bold text-red-500">{profile?.total_points || 0}</div>
+                  <div className="text-gray-500 text-xs">Punkte</div>
+                </div>
+                <div className="w-px h-12 bg-gray-700" />
+                <div>
+                  <div className="text-4xl font-bold text-yellow-400 flex items-center gap-1">
+                    <Coins className="w-6 h-6" />
+                    {coins}
+                  </div>
+                  <div className="text-gray-500 text-xs">Coins</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -409,6 +449,61 @@ export default function ProfilePage() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Sammlung */}
+        <div className="bg-[#111] rounded-xl border border-gray-800 overflow-hidden mb-6">
+          <div className="p-4 border-b border-gray-800 flex items-center justify-between">
+            <h2 className="font-bold text-white flex items-center gap-2">
+              <ShoppingBag className="w-5 h-5 text-yellow-500" />
+              Meine Sammlung
+            </h2>
+            <Link href="/shop" className="text-sm text-yellow-500 hover:underline">
+              Shop →
+            </Link>
+          </div>
+
+          {ownedItems.length > 0 ? (
+            <div className="p-4">
+              {/* Gruppiert nach Kategorie */}
+              {(['helmet', 'car', 'trophy', 'badge', 'special'] as const).map(cat => {
+                const catItems = ownedItems.filter(item => item.category === cat)
+                if (catItems.length === 0) return null
+                
+                return (
+                  <div key={cat} className="mb-4 last:mb-0">
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">
+                      {CATEGORY_LABELS[cat]} ({catItems.length})
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {catItems.map(item => {
+                        const rarityStyle = RARITY_COLORS[item.rarity]
+                        return (
+                          <div 
+                            key={item.id}
+                            className={`relative p-3 rounded-xl border-2 ${rarityStyle.border} bg-black/50`}
+                            title={`${item.name} - ${item.description}`}
+                          >
+                            <div className="text-3xl mb-1">{item.image_url}</div>
+                            <div className="text-xs font-medium text-white truncate max-w-[80px]">{item.name}</div>
+                            <div className={`text-[10px] ${rarityStyle.text} uppercase`}>{item.rarity}</div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="p-8 text-center">
+              <ShoppingBag className="w-12 h-12 mx-auto text-gray-600 mb-3" />
+              <p className="text-gray-500">Du hast noch keine Items</p>
+              <Link href="/shop" className="inline-block mt-4 px-4 py-2 bg-yellow-600 text-black font-bold rounded-lg hover:bg-yellow-500">
+                Zum Shop
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Recent Predictions */}
