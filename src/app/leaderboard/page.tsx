@@ -1,27 +1,15 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import Navbar from '@/components/Navbar'
 import { supabase, Profile, Prediction, Race } from '@/lib/supabase'
 import { getCountryFlag } from '@/lib/images'
-import { Crown, Trophy, RefreshCw, Target, Zap, Check, AlertCircle } from 'lucide-react'
+import { Crown, Trophy, RefreshCw, Target, Zap, TrendingUp, Medal, Users } from 'lucide-react'
 
 interface Driver {
   driver_number: number
   full_name: string
-}
-
-interface LivePosition {
-  position: number
-  driver_number: number
-  name_acronym?: string
-}
-
-interface LiveSession {
-  session_name: string
-  meeting_name: string
 }
 
 export default function LeaderboardPage() {
@@ -29,39 +17,20 @@ export default function LeaderboardPage() {
   const [players, setPlayers] = useState<Profile[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const [drivers, setDrivers] = useState<Driver[]>([])
-  
-  // Current Race & Predictions
   const [currentRace, setCurrentRace] = useState<Race | null>(null)
   const [allPredictions, setAllPredictions] = useState<{
     qualifying: { user: Profile, prediction: Prediction }[]
     sprint: { user: Profile, prediction: Prediction }[]
     race: { user: Profile, prediction: Prediction }[]
   }>({ qualifying: [], sprint: [], race: [] })
-  
-  // Live Simulation
-  const [livePositions, setLivePositions] = useState<LivePosition[]>([])
-  const [liveSession, setLiveSession] = useState<LiveSession | null>(null)
-  const [isLive, setIsLive] = useState(false)
-  const [simulatedStandings, setSimulatedStandings] = useState<{
-    profile: Profile
-    basePoints: number
-    livePoints: number
-    total: number
-  }[]>([])
-  
-  // Points Calculation
-  const [calculating, setCalculating] = useState(false)
-  const [calcResult, setCalcResult] = useState<{success: boolean, message: string} | null>(null)
-  const [lastRaceWithResults, setLastRaceWithResults] = useState<string | null>(null)
 
-  // Daten laden
   const fetchData = useCallback(async () => {
-      try {
+    try {
       // Spieler
       const { data: profilesData } = await supabase
-          .from('profiles')
-          .select('*')
-          .order('total_points', { ascending: false })
+        .from('profiles')
+        .select('*')
+        .order('total_points', { ascending: false })
       
       if (profilesData) setPlayers(profilesData)
       
@@ -71,11 +40,12 @@ export default function LeaderboardPage() {
       if (driversJson.drivers) setDrivers(driversJson.drivers)
       
       // Aktuelles Rennen
+      const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
       const { data: races } = await supabase
         .from('races')
         .select('*')
         .eq('season', 2025)
-        .gte('race_date', new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()) // 2 Tage zurück
+        .gte('race_date', threeDaysAgo)
         .order('race_date', { ascending: true })
         .limit(1)
       
@@ -116,184 +86,9 @@ export default function LeaderboardPage() {
     }
   }, [])
 
-  // Live-Positionen laden
-  const fetchLive = useCallback(async () => {
-    try {
-      const res = await fetch('/api/live-positions')
-      if (!res.ok) return
-      
-      const data = await res.json()
-      setLivePositions(data.positions || [])
-      setLiveSession(data.sessionInfo)
-      setIsLive(data.isActive || false)
-      
-      // Simulierte Punkte berechnen wenn live
-      if (data.isActive && data.positions?.length > 0 && players.length > 0) {
-        const positions = data.positions as LivePosition[]
-        const p1 = positions[0]?.driver_number || 0
-        const p2 = positions[1]?.driver_number || 0
-        const p3 = positions[2]?.driver_number || 0
-        
-        // Session-Typ bestimmen
-        const sessionName = (data.sessionInfo?.session_name || '').toLowerCase()
-        let sessionType: 'qualifying' | 'sprint' | 'race' = 'race'
-        if (sessionName.includes('quali')) sessionType = 'qualifying'
-        else if (sessionName.includes('sprint') && !sessionName.includes('quali')) sessionType = 'sprint'
-        
-        const predictions = allPredictions[sessionType] || []
-        
-        const standings = players.map(player => {
-          const playerPred = predictions.find(p => p.user.id === player.id)
-          let livePoints = 0
-          
-          if (playerPred) {
-            const pred = playerPred.prediction
-            if (sessionType === 'qualifying') {
-              if (pred.pole_driver === p1) livePoints = 10
-            } else if (sessionType === 'sprint') {
-              if (pred.p1_driver === p1) livePoints += 15
-              if (pred.p2_driver === p2) livePoints += 10
-              if (pred.p3_driver === p3) livePoints += 5
-            } else {
-              if (pred.p1_driver === p1) livePoints += 25
-              if (pred.p2_driver === p2) livePoints += 18
-              if (pred.p3_driver === p3) livePoints += 15
-            }
-          }
-          
-          return {
-            profile: player,
-            basePoints: player.total_points || 0,
-            livePoints,
-            total: (player.total_points || 0) + livePoints
-          }
-        }).sort((a, b) => b.total - a.total)
-        
-        setSimulatedStandings(standings)
-      }
-    } catch (e) {
-      console.error(e)
-    }
-  }, [players, allPredictions])
-
   useEffect(() => {
     fetchData()
   }, [fetchData])
-
-  useEffect(() => {
-    fetchLive()
-    const interval = setInterval(fetchLive, 120000) // Alle 2 Min
-    return () => clearInterval(interval)
-  }, [fetchLive])
-
-  // Auto-Berechnung beim Laden (mit Caching)
-  useEffect(() => {
-    async function autoCalculatePoints() {
-      if (!currentRace?.round) return
-      
-      try {
-        // Check localStorage wann zuletzt berechnet wurde
-        const lastCalc = localStorage.getItem(`points_calc_${currentRace.round}`)
-        const lastCalcTime = lastCalc ? parseInt(lastCalc) : 0
-        const now = Date.now()
-        const fiveMinutes = 5 * 60 * 1000
-        
-        // Nur alle 5 Minuten neu berechnen
-        if (now - lastCalcTime < fiveMinutes) {
-          console.log('Points recently calculated, skipping...')
-          return
-        }
-        
-        // Check ob neue Ergebnisse da sind
-        let hasNewResults = false
-        
-        // Sprint check
-        const sprintRes = await fetch(`https://api.jolpi.ca/ergast/f1/2025/${currentRace.round}/sprint/`)
-        const sprintData = await sprintRes.json()
-        if (sprintData.MRData?.RaceTable?.Races?.[0]?.SprintResults?.length > 0) {
-          hasNewResults = true
-        }
-        
-        // Qualifying check
-        const qualiRes = await fetch(`https://api.jolpi.ca/ergast/f1/2025/${currentRace.round}/qualifying/`)
-        const qualiData = await qualiRes.json()
-        if (qualiData.MRData?.RaceTable?.Races?.[0]?.QualifyingResults?.length > 0) {
-          hasNewResults = true
-        }
-        
-        // Race check
-        const raceRes = await fetch(`https://api.jolpi.ca/ergast/f1/2025/${currentRace.round}/results/`)
-        const raceData = await raceRes.json()
-        if (raceData.MRData?.RaceTable?.Races?.[0]?.Results?.length > 0) {
-          hasNewResults = true
-        }
-        
-        if (hasNewResults) {
-          setLastRaceWithResults(currentRace.race_name)
-          
-          // Automatisch berechnen
-          console.log('Auto-calculating points for round', currentRace.round)
-          const calcRes = await fetch('/api/calculate-points', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionType: 'all' })
-          })
-          
-          const calcData = await calcRes.json()
-          if (calcData.success) {
-            console.log('Points calculated:', calcData)
-            localStorage.setItem(`points_calc_${currentRace.round}`, now.toString())
-            // Daten neu laden
-            fetchData()
-          }
-        }
-      } catch (e) {
-        console.error('Auto-calc error:', e)
-      }
-    }
-    
-    autoCalculatePoints()
-  }, [currentRace, fetchData])
-
-  // Punkte berechnen
-  const calculatePoints = async () => {
-    setCalculating(true)
-    setCalcResult(null)
-    
-    try {
-      const res = await fetch('/api/calculate-points', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionType: 'all' })
-      })
-      
-      const data = await res.json()
-      
-      if (data.success) {
-        setCalcResult({
-          success: true,
-          message: `Punkte für ${data.raceName} berechnet!`
-        })
-        // Daten neu laden
-        setTimeout(() => {
-          fetchData()
-          setCalcResult(null)
-        }, 2000)
-      } else {
-        setCalcResult({
-          success: false,
-          message: data.error || 'Fehler beim Berechnen'
-        })
-      }
-    } catch (e) {
-      setCalcResult({
-        success: false,
-        message: 'Server-Fehler'
-      })
-    } finally {
-      setCalculating(false)
-    }
-  }
 
   const getDriverName = (num?: number | null) => {
     if (!num) return '-'
@@ -305,212 +100,143 @@ export default function LeaderboardPage() {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
         <RefreshCw className="w-8 h-8 text-red-600 animate-spin" />
-    </div>
+      </div>
     )
   }
 
   const userRank = user ? players.findIndex(p => p.id === user?.id) + 1 : 0
+  const totalPoints = players.reduce((sum, p) => sum + (p.total_points || 0), 0)
+  const totalPredictions = players.reduce((sum, p) => sum + (p.predictions_count || 0), 0)
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
       <Navbar />
       
       <main className="pt-20 pb-12 px-4 max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <Crown className="w-8 h-8 text-yellow-500" />
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <Trophy className="w-8 h-8 text-yellow-500" />
+          <div>
             <h1 className="text-2xl font-bold text-white">Rangliste</h1>
+            <p className="text-gray-500 text-sm">F1 Tippspiel 2025</p>
           </div>
-          
-          {/* Punkte neu berechnen Button (falls nötig) */}
-          <button
-            onClick={calculatePoints}
-            disabled={calculating}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
-              calculating 
-                ? 'bg-gray-800 text-gray-500 cursor-not-allowed' 
-                : 'bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white'
-            }`}
-            title="Punkte manuell aktualisieren"
-          >
-            <RefreshCw className={`w-4 h-4 ${calculating ? 'animate-spin' : ''}`} />
-          </button>
         </div>
 
-        {/* Calc Result */}
-        {calcResult && (
-          <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 ${
-            calcResult.success 
-              ? 'bg-green-900/30 border border-green-700/50' 
-              : 'bg-red-900/30 border border-red-700/50'
-          }`}>
-            {calcResult.success ? (
-              <Check className="w-5 h-5 text-green-400" />
-            ) : (
-              <AlertCircle className="w-5 h-5 text-red-400" />
-            )}
-            <span className={calcResult.success ? 'text-green-400' : 'text-red-400'}>
-              {calcResult.message}
-            </span>
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3 mb-8">
+          <div className="bg-[#111] rounded-xl p-4 border border-gray-800 text-center">
+            <Users className="w-5 h-5 text-blue-400 mx-auto mb-1" />
+            <div className="text-2xl font-bold text-white">{players.length}</div>
+            <div className="text-xs text-gray-500">Spieler</div>
           </div>
-        )}
-
-        {/* LIVE SIMULATION */}
-        {isLive && simulatedStandings.length > 0 && (
-          <div className="mb-8 bg-gradient-to-r from-green-900/30 to-emerald-900/20 rounded-xl border border-green-700/50 overflow-hidden">
-            <div className="p-4 border-b border-green-800/50 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
-                <h2 className="font-bold text-green-400">
-                  🏎️ LIVE: {liveSession?.session_name}
-                </h2>
-              </div>
-              <span className="text-xs text-gray-500">Simulierte Punkte</span>
-            </div>
-            
-            {/* Live Positionen */}
-            <div className="px-4 py-3 border-b border-green-800/30 bg-black/20">
-              <div className="flex gap-2 overflow-x-auto">
-                {livePositions.slice(0, 6).map((pos, idx) => (
-                  <div key={idx} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-sm ${
-                    idx === 0 ? 'bg-yellow-500/20 text-yellow-400' :
-                    idx === 1 ? 'bg-gray-500/20 text-gray-300' :
-                    idx === 2 ? 'bg-orange-500/20 text-orange-400' :
-                    'bg-gray-800/50 text-gray-400'
-                  }`}>
-                    <span className="font-bold">P{pos.position}</span>
-                    <span>{pos.name_acronym || `#${pos.driver_number}`}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Live Rangliste */}
-            <div className="divide-y divide-green-900/30">
-              {simulatedStandings.slice(0, 10).map((standing, idx) => {
-                const isMe = standing.profile.id === user?.id
-                return (
-                  <div key={standing.profile.id} className={`flex items-center justify-between px-4 py-3 ${isMe ? 'bg-red-950/30' : ''}`}>
-                    <div className="flex items-center gap-3">
-                      <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                        idx === 0 ? 'bg-yellow-500 text-black' :
-                        idx === 1 ? 'bg-gray-400 text-black' :
-                        idx === 2 ? 'bg-orange-500 text-black' :
-                        'bg-gray-800 text-gray-400'
-                      }`}>
-                        {idx + 1}
-                      </span>
-                      <span className={`font-medium ${isMe ? 'text-red-400' : 'text-white'}`}>
-                        {standing.profile.username}
-                        {isMe && <span className="text-gray-500 ml-1">(Du)</span>}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className={`text-sm ${standing.livePoints > 0 ? 'text-green-400' : 'text-gray-600'}`}>
-                        {standing.livePoints > 0 ? `+${standing.livePoints}` : '+0'}
-                      </span>
-                      <span className="font-bold text-white text-lg">{standing.total}</span>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+          <div className="bg-[#111] rounded-xl p-4 border border-gray-800 text-center">
+            <Target className="w-5 h-5 text-green-400 mx-auto mb-1" />
+            <div className="text-2xl font-bold text-white">{totalPredictions}</div>
+            <div className="text-xs text-gray-500">Tipps gesamt</div>
           </div>
-        )}
+          <div className="bg-[#111] rounded-xl p-4 border border-gray-800 text-center">
+            <TrendingUp className="w-5 h-5 text-purple-400 mx-auto mb-1" />
+            <div className="text-2xl font-bold text-white">{totalPoints}</div>
+            <div className="text-xs text-gray-500">Punkte gesamt</div>
+          </div>
+        </div>
 
         {/* Podium */}
         {players.length >= 2 && (
-          <div className="flex items-end justify-center gap-4 mb-8">
+          <div className="flex items-end justify-center gap-6 mb-10 pt-8">
             {/* 2. Platz */}
             <div className="flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 flex items-center justify-center text-2xl font-bold text-black mb-2 shadow-lg">
-                {players[1].username.charAt(0).toUpperCase()}
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 flex items-center justify-center text-3xl font-bold text-black mb-3 shadow-xl ring-4 ring-gray-500/30">
+                {players[1]?.username.charAt(0).toUpperCase()}
               </div>
-              <div className="text-gray-300 font-medium truncate max-w-20">{players[1].username}</div>
-              <div className="text-gray-400 text-sm">{players[1].total_points} Pkt</div>
-              <div className="w-20 h-16 bg-gradient-to-t from-gray-600 to-gray-500 rounded-t-lg mt-2 flex items-center justify-center shadow-lg">
-                <span className="text-2xl font-bold text-white">2</span>
+              <div className="text-gray-300 font-bold text-lg truncate max-w-24">{players[1]?.username}</div>
+              <div className="text-2xl font-bold text-white">{players[1]?.total_points}</div>
+              <div className="text-gray-500 text-sm mb-2">{players[1]?.predictions_count || 0} Tipps</div>
+              <div className="w-24 h-20 bg-gradient-to-t from-gray-700 to-gray-500 rounded-t-xl flex items-center justify-center shadow-xl">
+                <Medal className="w-10 h-10 text-gray-300" />
               </div>
             </div>
             
             {/* 1. Platz */}
-            <div className="flex flex-col items-center -mt-6">
-              <div className="relative">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-3xl font-bold text-black mb-2 shadow-lg ring-4 ring-yellow-500/30">
-                  {players[0].username.charAt(0).toUpperCase()}
-                </div>
-                <Crown className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-8 text-yellow-400 drop-shadow-lg" />
+            <div className="flex flex-col items-center -mt-8">
+              <Crown className="w-10 h-10 text-yellow-400 mb-2 drop-shadow-lg" />
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-4xl font-bold text-black mb-3 shadow-xl ring-4 ring-yellow-500/50">
+                {players[0]?.username.charAt(0).toUpperCase()}
               </div>
-              <div className="text-yellow-400 font-bold text-lg truncate max-w-24">{players[0].username}</div>
-              <div className="text-yellow-500 font-medium">{players[0].total_points} Pkt</div>
-              <div className="w-24 h-24 bg-gradient-to-t from-yellow-600 to-yellow-500 rounded-t-lg mt-2 flex items-center justify-center shadow-lg">
-                <span className="text-3xl font-bold text-black">1</span>
+              <div className="text-yellow-400 font-bold text-xl truncate max-w-28">{players[0]?.username}</div>
+              <div className="text-3xl font-bold text-white">{players[0]?.total_points}</div>
+              <div className="text-gray-500 text-sm mb-2">{players[0]?.predictions_count || 0} Tipps</div>
+              <div className="w-28 h-28 bg-gradient-to-t from-yellow-700 to-yellow-500 rounded-t-xl flex items-center justify-center shadow-xl">
+                <Trophy className="w-12 h-12 text-yellow-300" />
               </div>
             </div>
             
-            {/* 3. Platz - nur wenn vorhanden */}
+            {/* 3. Platz */}
             {players[2] && (
               <div className="flex flex-col items-center">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-xl font-bold text-black mb-2 shadow-lg">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-2xl font-bold text-black mb-3 shadow-xl ring-4 ring-orange-500/30">
                   {players[2].username.charAt(0).toUpperCase()}
                 </div>
-                <div className="text-orange-400 font-medium text-sm truncate max-w-16">{players[2].username}</div>
-                <div className="text-orange-500 text-xs">{players[2].total_points} Pkt</div>
-                <div className="w-16 h-12 bg-gradient-to-t from-orange-700 to-orange-600 rounded-t-lg mt-2 flex items-center justify-center shadow-lg">
-                  <span className="text-xl font-bold text-white">3</span>
+                <div className="text-orange-400 font-bold truncate max-w-20">{players[2].username}</div>
+                <div className="text-xl font-bold text-white">{players[2].total_points}</div>
+                <div className="text-gray-500 text-sm mb-2">{players[2].predictions_count || 0} Tipps</div>
+                <div className="w-20 h-14 bg-gradient-to-t from-orange-800 to-orange-600 rounded-t-xl flex items-center justify-center shadow-xl">
+                  <Medal className="w-8 h-8 text-orange-300" />
                 </div>
               </div>
             )}
           </div>
         )}
 
-        {/* Alle Spieler Tabelle */}
-        <div className="bg-[#111] rounded-xl overflow-hidden border border-gray-800 mb-8">
+        {/* Alle Spieler */}
+        <div className="bg-[#111] rounded-2xl overflow-hidden border border-gray-800 mb-8">
           <div className="p-4 border-b border-gray-800">
-            <h2 className="font-bold text-white flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-yellow-500" />
-              Alle Spieler
-            </h2>
+            <h2 className="font-bold text-white">Alle Spieler</h2>
           </div>
           
           <div className="divide-y divide-gray-800/50">
             {players.map((player, idx) => {
               const isMe = player.id === user?.id
+              const avgPoints = player.predictions_count && player.predictions_count > 0
+                ? (player.total_points / player.predictions_count).toFixed(1)
+                : '0'
+              
               return (
-                <div key={player.id} className={`flex items-center justify-between px-4 py-3 ${isMe ? 'bg-red-950/30' : 'hover:bg-[#1a1a1a]'}`}>
-                  <div className="flex items-center gap-3">
-                    <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                      idx === 0 ? 'bg-yellow-500 text-black' :
+                <div key={player.id} className={`flex items-center justify-between px-4 py-4 ${isMe ? 'bg-red-950/20' : 'hover:bg-gray-900/50'}`}>
+                  <div className="flex items-center gap-4">
+                    <span className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                      idx === 0 ? 'bg-yellow-500 text-black text-lg' :
                       idx === 1 ? 'bg-gray-400 text-black' :
                       idx === 2 ? 'bg-orange-500 text-black' :
-                      'bg-gray-800 text-gray-400'
-                  }`}>
+                      'bg-gray-800 text-gray-400 text-sm'
+                    }`}>
                       {idx + 1}
                     </span>
                     <div>
-                      <span className={`font-medium ${isMe ? 'text-red-400' : 'text-white'}`}>
-                      {player.username}
-                      </span>
-                      {isMe && <span className="text-gray-500 text-sm ml-2">(Du)</span>}
+                      <div className={`font-bold ${isMe ? 'text-red-400' : 'text-white'}`}>
+                        {player.username}
+                        {isMe && <span className="text-gray-500 font-normal ml-2">(Du)</span>}
+                      </div>
+                      <div className="text-gray-500 text-sm">{player.predictions_count || 0} Tipps • Ø {avgPoints} Pkt</div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-6">
-                    <span className="text-gray-500 text-sm">{player.predictions_count || 0} Tipps</span>
-                    <span className="font-bold text-white text-lg">{player.total_points || 0}</span>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-white">{player.total_points}</div>
+                    <div className="text-gray-500 text-xs">Punkte</div>
                   </div>
                 </div>
               )
             })}
           </div>
-          </div>
+        </div>
 
-        {/* Alle Tipps für aktuelles Rennen */}
+        {/* Tipps für aktuelles Rennen */}
         {currentRace && (allPredictions.qualifying.length > 0 || allPredictions.sprint.length > 0 || allPredictions.race.length > 0) && (
-          <div className="bg-[#111] rounded-xl overflow-hidden border border-gray-800">
+          <div className="bg-[#111] rounded-2xl overflow-hidden border border-gray-800">
             <div className="p-4 border-b border-gray-800">
               <h2 className="font-bold text-white flex items-center gap-2">
-                <Target className="w-5 h-5 text-blue-500" />
-                {getCountryFlag(currentRace.race_name)} Tipps: {currentRace.race_name}
+                {getCountryFlag(currentRace.race_name)} 
+                <span className="ml-1">Tipps: {currentRace.race_name}</span>
               </h2>
             </div>
             
@@ -518,12 +244,18 @@ export default function LeaderboardPage() {
               {/* Qualifying */}
               {allPredictions.qualifying.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-bold text-gray-400 mb-3">QUALIFYING - Pole</h3>
+                  <h3 className="text-sm font-bold text-blue-400 mb-3 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-blue-400" />
+                    QUALIFYING - Pole Position
+                  </h3>
                   <div className="flex flex-wrap gap-2">
                     {allPredictions.qualifying.map(({ user: u, prediction }) => (
-                      <div key={u.id} className={`px-3 py-2 rounded-lg ${u.id === user?.id ? 'bg-red-900/30 border border-red-700' : 'bg-gray-800'}`}>
-                        <span className="text-gray-400 text-sm">{u.username}: </span>
-                        <span className="text-blue-400 font-bold">{getDriverName(prediction.pole_driver)}</span>
+                      <div key={u.id} className={`px-4 py-2 rounded-xl ${u.id === user?.id ? 'bg-red-900/30 ring-1 ring-red-700' : 'bg-gray-800/50'}`}>
+                        <span className="text-gray-400 text-sm">{u.username}:</span>
+                        <span className="text-blue-400 font-bold ml-2">{getDriverName(prediction.pole_driver)}</span>
+                        {prediction.points_earned > 0 && (
+                          <span className="text-green-400 text-sm ml-2">+{prediction.points_earned}</span>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -533,17 +265,23 @@ export default function LeaderboardPage() {
               {/* Sprint */}
               {allPredictions.sprint.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-bold text-gray-400 mb-3">SPRINT - Podium</h3>
+                  <h3 className="text-sm font-bold text-purple-400 mb-3 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-purple-400" />
+                    SPRINT - Podium
+                  </h3>
                   <div className="space-y-2">
                     {allPredictions.sprint.map(({ user: u, prediction }) => (
-                      <div key={u.id} className={`px-3 py-2 rounded-lg flex items-center justify-between ${u.id === user?.id ? 'bg-red-900/30 border border-red-700' : 'bg-gray-800'}`}>
-                        <span className="text-gray-400 text-sm">{u.username}</span>
-                        <div className="flex gap-2">
+                      <div key={u.id} className={`flex items-center justify-between px-4 py-3 rounded-xl ${u.id === user?.id ? 'bg-red-900/30 ring-1 ring-red-700' : 'bg-gray-800/50'}`}>
+                        <span className="text-gray-400">{u.username}</span>
+                        <div className="flex items-center gap-3">
                           <span className="text-yellow-400 font-bold">{getDriverName(prediction.p1_driver)}</span>
-                          <span className="text-gray-500">-</span>
+                          <span className="text-gray-600">→</span>
                           <span className="text-gray-300 font-bold">{getDriverName(prediction.p2_driver)}</span>
-                          <span className="text-gray-500">-</span>
+                          <span className="text-gray-600">→</span>
                           <span className="text-orange-400 font-bold">{getDriverName(prediction.p3_driver)}</span>
+                          {prediction.points_earned > 0 && (
+                            <span className="text-green-400 font-bold ml-2">+{prediction.points_earned}</span>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -554,31 +292,37 @@ export default function LeaderboardPage() {
               {/* Race */}
               {allPredictions.race.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-bold text-gray-400 mb-3">RENNEN - Podium & Fastest Lap</h3>
+                  <h3 className="text-sm font-bold text-red-400 mb-3 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-red-400" />
+                    RENNEN - Podium & Fastest Lap
+                  </h3>
                   <div className="space-y-2">
                     {allPredictions.race.map(({ user: u, prediction }) => (
-                      <div key={u.id} className={`px-3 py-2 rounded-lg flex items-center justify-between ${u.id === user?.id ? 'bg-red-900/30 border border-red-700' : 'bg-gray-800'}`}>
-                        <span className="text-gray-400 text-sm">{u.username}</span>
-                        <div className="flex items-center gap-2">
+                      <div key={u.id} className={`flex items-center justify-between px-4 py-3 rounded-xl ${u.id === user?.id ? 'bg-red-900/30 ring-1 ring-red-700' : 'bg-gray-800/50'}`}>
+                        <span className="text-gray-400">{u.username}</span>
+                        <div className="flex items-center gap-3">
                           <span className="text-yellow-400 font-bold">{getDriverName(prediction.p1_driver)}</span>
-                          <span className="text-gray-500">-</span>
+                          <span className="text-gray-600">→</span>
                           <span className="text-gray-300 font-bold">{getDriverName(prediction.p2_driver)}</span>
-                          <span className="text-gray-500">-</span>
+                          <span className="text-gray-600">→</span>
                           <span className="text-orange-400 font-bold">{getDriverName(prediction.p3_driver)}</span>
                           {prediction.fastest_lap_driver && (
                             <>
                               <span className="text-gray-600 mx-1">|</span>
-                              <Zap className="w-3 h-3 text-purple-400" />
-                              <span className="text-purple-400 text-sm">{getDriverName(prediction.fastest_lap_driver)}</span>
+                              <Zap className="w-4 h-4 text-purple-400" />
+                              <span className="text-purple-400">{getDriverName(prediction.fastest_lap_driver)}</span>
                             </>
+                          )}
+                          {prediction.points_earned > 0 && (
+                            <span className="text-green-400 font-bold ml-2">+{prediction.points_earned}</span>
                           )}
                         </div>
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
           </div>
         )}
       </main>
