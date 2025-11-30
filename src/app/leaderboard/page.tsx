@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import Navbar from '@/components/Navbar'
 import { supabase, Profile, Prediction, Race } from '@/lib/supabase'
 import { getCountryFlag } from '@/lib/images'
-import { Crown, Trophy, RefreshCw, Target, Zap, Calculator, Check, AlertCircle } from 'lucide-react'
+import { Crown, Trophy, RefreshCw, Target, Zap, Check, AlertCircle } from 'lucide-react'
 
 interface Driver {
   driver_number: number
@@ -186,40 +186,74 @@ export default function LeaderboardPage() {
     return () => clearInterval(interval)
   }, [fetchLive])
 
-  // Check ob Ergebnisse da sind (Race, Sprint oder Qualifying)
+  // Auto-Berechnung beim Laden (mit Caching)
   useEffect(() => {
-    async function checkResults() {
+    async function autoCalculatePoints() {
+      if (!currentRace?.round) return
+      
       try {
-        // Check for Sprint results (current race)
-        if (currentRace?.round) {
-          const sprintRes = await fetch(`https://api.jolpi.ca/ergast/f1/2025/${currentRace.round}/sprint/`)
-          const sprintData = await sprintRes.json()
-          if (sprintData.MRData?.RaceTable?.Races?.[0]?.SprintResults?.length > 0) {
-            setLastRaceWithResults(currentRace.race_name)
-            return
-          }
-          
-          const qualiRes = await fetch(`https://api.jolpi.ca/ergast/f1/2025/${currentRace.round}/qualifying/`)
-          const qualiData = await qualiRes.json()
-          if (qualiData.MRData?.RaceTable?.Races?.[0]?.QualifyingResults?.length > 0) {
-            setLastRaceWithResults(currentRace.race_name)
-            return
-          }
+        // Check localStorage wann zuletzt berechnet wurde
+        const lastCalc = localStorage.getItem(`points_calc_${currentRace.round}`)
+        const lastCalcTime = lastCalc ? parseInt(lastCalc) : 0
+        const now = Date.now()
+        const fiveMinutes = 5 * 60 * 1000
+        
+        // Nur alle 5 Minuten neu berechnen
+        if (now - lastCalcTime < fiveMinutes) {
+          console.log('Points recently calculated, skipping...')
+          return
         }
         
-        // Fallback: Last finished race
-        const res = await fetch('https://api.jolpi.ca/ergast/f1/current/last/results/')
-        const data = await res.json()
-        const race = data.MRData?.RaceTable?.Races?.[0]
-        if (race?.Results?.length > 0) {
-          setLastRaceWithResults(race.raceName)
+        // Check ob neue Ergebnisse da sind
+        let hasNewResults = false
+        
+        // Sprint check
+        const sprintRes = await fetch(`https://api.jolpi.ca/ergast/f1/2025/${currentRace.round}/sprint/`)
+        const sprintData = await sprintRes.json()
+        if (sprintData.MRData?.RaceTable?.Races?.[0]?.SprintResults?.length > 0) {
+          hasNewResults = true
+        }
+        
+        // Qualifying check
+        const qualiRes = await fetch(`https://api.jolpi.ca/ergast/f1/2025/${currentRace.round}/qualifying/`)
+        const qualiData = await qualiRes.json()
+        if (qualiData.MRData?.RaceTable?.Races?.[0]?.QualifyingResults?.length > 0) {
+          hasNewResults = true
+        }
+        
+        // Race check
+        const raceRes = await fetch(`https://api.jolpi.ca/ergast/f1/2025/${currentRace.round}/results/`)
+        const raceData = await raceRes.json()
+        if (raceData.MRData?.RaceTable?.Races?.[0]?.Results?.length > 0) {
+          hasNewResults = true
+        }
+        
+        if (hasNewResults) {
+          setLastRaceWithResults(currentRace.race_name)
+          
+          // Automatisch berechnen
+          console.log('Auto-calculating points for round', currentRace.round)
+          const calcRes = await fetch('/api/calculate-points', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionType: 'all' })
+          })
+          
+          const calcData = await calcRes.json()
+          if (calcData.success) {
+            console.log('Points calculated:', calcData)
+            localStorage.setItem(`points_calc_${currentRace.round}`, now.toString())
+            // Daten neu laden
+            fetchData()
+          }
         }
       } catch (e) {
-        console.error(e)
+        console.error('Auto-calc error:', e)
       }
     }
-    checkResults()
-  }, [currentRace])
+    
+    autoCalculatePoints()
+  }, [currentRace, fetchData])
 
   // Punkte berechnen
   const calculatePoints = async () => {
@@ -288,25 +322,19 @@ export default function LeaderboardPage() {
             <h1 className="text-2xl font-bold text-white">Rangliste</h1>
           </div>
           
-          {/* Punkte berechnen Button */}
-          {lastRaceWithResults && (
-            <button
-              onClick={calculatePoints}
-              disabled={calculating}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                calculating 
-                  ? 'bg-gray-700 text-gray-400 cursor-not-allowed' 
-                  : 'bg-blue-600 hover:bg-blue-500 text-white'
-              }`}
-            >
-              {calculating ? (
-                <RefreshCw className="w-4 h-4 animate-spin" />
-              ) : (
-                <Calculator className="w-4 h-4" />
-              )}
-              {calculating ? 'Berechne...' : 'Punkte aktualisieren'}
-            </button>
-          )}
+          {/* Punkte neu berechnen Button (falls nötig) */}
+          <button
+            onClick={calculatePoints}
+            disabled={calculating}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+              calculating 
+                ? 'bg-gray-800 text-gray-500 cursor-not-allowed' 
+                : 'bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white'
+            }`}
+            title="Punkte manuell aktualisieren"
+          >
+            <RefreshCw className={`w-4 h-4 ${calculating ? 'animate-spin' : ''}`} />
+          </button>
         </div>
 
         {/* Calc Result */}
