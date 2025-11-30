@@ -226,8 +226,14 @@ export default function DashboardPage() {
                     <h2 className="text-2xl font-bold">{nextRace.race_name}</h2>
                     <p className="text-gray-500">{nextRace.circuit_name}</p>
                   </div>
-                  {nextRace.is_sprint && (
-                    <span className="bg-purple-600 text-xs font-bold px-3 py-1 rounded-full">SPRINT</span>
+                  {nextSessionName && (
+                    <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+                      nextSessionName === 'Sprint' ? 'bg-purple-600' :
+                      nextSessionName === 'Qualifying' ? 'bg-blue-600' :
+                      'bg-red-600'
+                    }`}>
+                      {nextSessionName.toUpperCase()}
+                    </span>
                   )}
                 </div>
                 

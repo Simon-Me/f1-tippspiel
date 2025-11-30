@@ -195,7 +195,6 @@ export default function RacesPage() {
           {filteredRaces.map((race) => {
             const raceDate = new Date(race.race_date)
             const isFinished = isPast(raceDate) && !isToday(raceDate)
-            const isLive = isToday(raceDate)
             const isExpanded = expandedRace === race.id
             const { count: tipCount, total: tipTotal } = getTipCount(race.id, race.is_sprint)
             const preds = userPredictions[race.id] || {}
@@ -220,19 +219,13 @@ export default function RacesPage() {
                     <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                       <span className="text-xs text-gray-500">R{race.round}</span>
                       {race.is_sprint && (
-                        <span className="px-1.5 py-0.5 bg-purple-600/20 text-purple-400 text-[10px] font-bold rounded">
-                          SPRINT
-                        </span>
-                      )}
-                      {isLive && (
-                        <span className="px-1.5 py-0.5 bg-red-600 text-white text-[10px] font-bold rounded flex items-center gap-1">
-                          <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-                          LIVE
+                        <span className="px-1.5 py-0.5 bg-purple-900/50 text-purple-300 text-[10px] rounded">
+                          +Sprint
                         </span>
                       )}
                       {isFinished && (
-                        <span className="px-1.5 py-0.5 bg-green-600/20 text-green-400 text-[10px] rounded">
-                          Beendet
+                        <span className="px-1.5 py-0.5 bg-gray-800 text-gray-400 text-[10px] rounded">
+                          ✓
                         </span>
                       )}
                     </div>
