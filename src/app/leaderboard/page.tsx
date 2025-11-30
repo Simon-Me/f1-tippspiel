@@ -3,35 +3,41 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import Navbar from '@/components/Navbar'
-import { supabase, Profile, Prediction, Race } from '@/lib/supabase'
+import { supabase, Profile, Race } from '@/lib/supabase'
 import { getCountryFlag } from '@/lib/images'
-import { Trophy, Crown, Loader2, Check, X, Minus, ChevronDown, ChevronUp } from 'lucide-react'
+import { Trophy, Crown, Loader2, Check, X } from 'lucide-react'
 
 interface Driver {
   driver_number: number
   full_name: string
 }
 
-interface PointBreakdown {
-  label: string
+interface TipDetail {
+  session: 'qualifying' | 'sprint' | 'race'
+  tipP1?: string
+  tipP2?: string
+  tipP3?: string
+  tipFL?: string
+  tipPole?: string
+  tipP1Num?: number
+  tipP2Num?: number
+  tipP3Num?: number
+  tipFLNum?: number
+  tipPoleNum?: number
   points: number
-  correct: boolean
 }
 
-interface FormattedPrediction {
-  type: string
-  user: string
-  tip: string
-  points: number
-  result?: string
-  breakdown?: PointBreakdown[]
-  isExpanded?: boolean
+interface PlayerTips {
+  username: string
+  oderId: string
+  tips: TipDetail[]
+  totalEventPoints: number
 }
 
 interface SessionResult {
-  qualifying?: { pole: number | null, poleName: string }
-  sprint?: { p1: number | null, p2: number | null, p3: number | null, p1Name: string, p2Name: string, p3Name: string }
-  race?: { p1: number | null, p2: number | null, p3: number | null, fl: number | null, p1Name: string, p2Name: string, p3Name: string, flName: string }
+  qualifying?: { pole: number, poleName: string }
+  sprint?: { p1: number, p2: number, p3: number, p1Name: string, p2Name: string, p3Name: string }
+  race?: { p1: number, p2: number, p3: number, fl: number, p1Name: string, p2Name: string, p3Name: string, flName: string }
 }
 
 // Punktesystem
@@ -46,11 +52,9 @@ export default function LeaderboardPage() {
   const { user } = useAuth()
   const [players, setPlayers] = useState<Profile[]>([])
   const [loadingData, setLoadingData] = useState(true)
-  const [drivers, setDrivers] = useState<Driver[]>([])
   const [currentRace, setCurrentRace] = useState<Race | null>(null)
-  const [predictions, setPredictions] = useState<FormattedPrediction[]>([])
+  const [playerTips, setPlayerTips] = useState<PlayerTips[]>([])
   const [sessionResults, setSessionResults] = useState<SessionResult>({})
-  const [expandedIdx, setExpandedIdx] = useState<number | null>(null)
 
   const fetchData = useCallback(async () => {
     try {
@@ -63,11 +67,11 @@ export default function LeaderboardPage() {
       
       const driversRes = await fetch('/api/drivers')
       const driversJson = await driversRes.json()
-      if (driversJson.drivers) setDrivers(driversJson.drivers)
+      const driversList: Driver[] = driversJson.drivers || []
 
-      const getDriverName = (num: number | null) => {
+      const getDriverName = (num: number | null | undefined): string => {
         if (!num) return '-'
-        const d = driversJson.drivers?.find((d: Driver) => d.driver_number === num)
+        const d = driversList.find(d => d.driver_number === num)
         return d?.full_name?.split(' ').pop() || '-'
       }
       
@@ -84,9 +88,17 @@ export default function LeaderboardPage() {
         setCurrentRace(races[0])
         const raceRound = races[0].round
 
-        // Lade die echten Ergebnisse von der API
+        // Lade Ergebnisse
         const results: SessionResult = {}
-        
+        const DRIVER_MAP: Record<string, number> = {
+          'VER': 1, 'NOR': 4, 'LEC': 16, 'PIA': 81, 'SAI': 55,
+          'RUS': 63, 'HAM': 44, 'ALO': 14, 'STR': 18, 'HUL': 27,
+          'ANT': 12, 'GAS': 10, 'TSU': 22, 'OCO': 31, 'ALB': 23,
+          'BOT': 77, 'ZHO': 24, 'MAG': 20, 'LAW': 30, 'HAD': 6,
+          'BEA': 87, 'DOO': 7, 'COL': 43, 'BOR': 5
+        }
+        const getNum = (code: string) => DRIVER_MAP[code] || 0
+
         try {
           const [qualiRes, sprintRes, raceRes] = await Promise.all([
             fetch(`https://api.jolpi.ca/ergast/f1/2025/${raceRound}/qualifying/`),
@@ -94,23 +106,11 @@ export default function LeaderboardPage() {
             fetch(`https://api.jolpi.ca/ergast/f1/2025/${raceRound}/results/`)
           ])
 
-          const DRIVER_MAP: Record<string, number> = {
-            'VER': 1, 'NOR': 4, 'LEC': 16, 'PIA': 81, 'SAI': 55,
-            'RUS': 63, 'HAM': 44, 'ALO': 14, 'STR': 18, 'HUL': 27,
-            'ANT': 12, 'GAS': 10, 'TSU': 22, 'OCO': 31, 'ALB': 23,
-            'BOT': 77, 'ZHO': 24, 'MAG': 20, 'LAW': 30, 'HAD': 6,
-            'BEA': 87, 'DOO': 7, 'COL': 43, 'BOR': 5
-          }
-          const getNum = (code: string) => DRIVER_MAP[code] || 0
-
           const qualiData = await qualiRes.json()
           const qualiResults = qualiData.MRData?.RaceTable?.Races?.[0]?.QualifyingResults
           if (qualiResults?.[0]) {
-            const poleCode = qualiResults[0].Driver.code
-            results.qualifying = {
-              pole: getNum(poleCode),
-              poleName: getDriverName(getNum(poleCode))
-            }
+            const poleNum = getNum(qualiResults[0].Driver.code)
+            results.qualifying = { pole: poleNum, poleName: getDriverName(poleNum) }
           }
 
           const sprintData = await sprintRes.json()
@@ -119,13 +119,12 @@ export default function LeaderboardPage() {
             const sp1 = sprintResults.find((r: { position: string }) => r.position === '1')
             const sp2 = sprintResults.find((r: { position: string }) => r.position === '2')
             const sp3 = sprintResults.find((r: { position: string }) => r.position === '3')
+            const p1Num = sp1 ? getNum(sp1.Driver.code) : 0
+            const p2Num = sp2 ? getNum(sp2.Driver.code) : 0
+            const p3Num = sp3 ? getNum(sp3.Driver.code) : 0
             results.sprint = {
-              p1: sp1 ? getNum(sp1.Driver.code) : null,
-              p2: sp2 ? getNum(sp2.Driver.code) : null,
-              p3: sp3 ? getNum(sp3.Driver.code) : null,
-              p1Name: sp1 ? getDriverName(getNum(sp1.Driver.code)) : '-',
-              p2Name: sp2 ? getDriverName(getNum(sp2.Driver.code)) : '-',
-              p3Name: sp3 ? getDriverName(getNum(sp3.Driver.code)) : '-'
+              p1: p1Num, p2: p2Num, p3: p3Num,
+              p1Name: getDriverName(p1Num), p2Name: getDriverName(p2Num), p3Name: getDriverName(p3Num)
             }
           }
 
@@ -136,15 +135,14 @@ export default function LeaderboardPage() {
             const rp2 = raceResults.find((r: { position: string }) => r.position === '2')
             const rp3 = raceResults.find((r: { position: string }) => r.position === '3')
             const fl = raceResults.find((r: { FastestLap?: { rank: string } }) => r.FastestLap?.rank === '1')
+            const p1Num = rp1 ? getNum(rp1.Driver.code) : 0
+            const p2Num = rp2 ? getNum(rp2.Driver.code) : 0
+            const p3Num = rp3 ? getNum(rp3.Driver.code) : 0
+            const flNum = fl ? getNum(fl.Driver.code) : 0
             results.race = {
-              p1: rp1 ? getNum(rp1.Driver.code) : null,
-              p2: rp2 ? getNum(rp2.Driver.code) : null,
-              p3: rp3 ? getNum(rp3.Driver.code) : null,
-              fl: fl ? getNum(fl.Driver.code) : null,
-              p1Name: rp1 ? getDriverName(getNum(rp1.Driver.code)) : '-',
-              p2Name: rp2 ? getDriverName(getNum(rp2.Driver.code)) : '-',
-              p3Name: rp3 ? getDriverName(getNum(rp3.Driver.code)) : '-',
-              flName: fl ? getDriverName(getNum(fl.Driver.code)) : '-'
+              p1: p1Num, p2: p2Num, p3: p3Num, fl: flNum,
+              p1Name: getDriverName(p1Num), p2Name: getDriverName(p2Num), 
+              p3Name: getDriverName(p3Num), flName: getDriverName(flNum)
             }
           }
         } catch (e) {
@@ -153,139 +151,71 @@ export default function LeaderboardPage() {
 
         setSessionResults(results)
         
+        // Lade Predictions und gruppiere nach Spieler
         const { data: preds } = await supabase
           .from('predictions')
           .select('*')
           .eq('race_id', races[0].id)
         
         if (preds) {
-          const formatted: FormattedPrediction[] = []
+          const byPlayer: Record<string, PlayerTips> = {}
           
-          preds.forEach(pred => {
-            const profile = profilesData.find(p => p.id === pred.user_id)
-            if (!profile) return
-            
-            if (pred.session_type === 'qualifying') {
-              const driver = driversJson.drivers?.find((d: Driver) => d.driver_number === pred.pole_driver)
-              const driverName = driver?.full_name?.split(' ').pop() || '-'
-              const isCorrect = results.qualifying && pred.pole_driver === results.qualifying.pole
-              
-              formatted.push({
-                type: 'Quali',
-                user: profile.username,
-                tip: driverName,
-                points: pred.points_earned || 0,
-                result: results.qualifying ? results.qualifying.poleName : undefined,
-                breakdown: results.qualifying ? [{
-                  label: `Pole: ${driverName} ${isCorrect ? '✓' : `(war ${results.qualifying.poleName})`}`,
-                  points: isCorrect ? POINTS.QUALI_POLE : 0,
-                  correct: !!isCorrect
-                }] : undefined
-              })
-            } else if (pred.session_type === 'sprint') {
-              const d1 = driversJson.drivers?.find((d: Driver) => d.driver_number === pred.p1_driver)
-              const d2 = driversJson.drivers?.find((d: Driver) => d.driver_number === pred.p2_driver)
-              const d3 = driversJson.drivers?.find((d: Driver) => d.driver_number === pred.p3_driver)
-              const d1Name = d1?.full_name?.split(' ').pop() || '-'
-              const d2Name = d2?.full_name?.split(' ').pop() || '-'
-              const d3Name = d3?.full_name?.split(' ').pop() || '-'
-              
-              const breakdown: PointBreakdown[] = []
-              if (results.sprint) {
-                const p1Correct = pred.p1_driver === results.sprint.p1
-                const p2Correct = pred.p2_driver === results.sprint.p2
-                const p3Correct = pred.p3_driver === results.sprint.p3
-                
-                breakdown.push({
-                  label: `P1: ${d1Name} ${p1Correct ? '✓' : `(war ${results.sprint.p1Name})`}`,
-                  points: p1Correct ? POINTS.SPRINT_P1 : 0,
-                  correct: p1Correct
-                })
-                breakdown.push({
-                  label: `P2: ${d2Name} ${p2Correct ? '✓' : `(war ${results.sprint.p2Name})`}`,
-                  points: p2Correct ? POINTS.SPRINT_P2 : 0,
-                  correct: p2Correct
-                })
-                breakdown.push({
-                  label: `P3: ${d3Name} ${p3Correct ? '✓' : `(war ${results.sprint.p3Name})`}`,
-                  points: p3Correct ? POINTS.SPRINT_P3 : 0,
-                  correct: p3Correct
-                })
-              }
-              
-              formatted.push({
-                type: 'Sprint',
-                user: profile.username,
-                tip: `${d1Name} → ${d2Name} → ${d3Name}`,
-                points: pred.points_earned || 0,
-                result: results.sprint ? `${results.sprint.p1Name} → ${results.sprint.p2Name} → ${results.sprint.p3Name}` : undefined,
-                breakdown: breakdown.length > 0 ? breakdown : undefined
-              })
-            } else if (pred.session_type === 'race') {
-              const d1 = driversJson.drivers?.find((d: Driver) => d.driver_number === pred.p1_driver)
-              const d2 = driversJson.drivers?.find((d: Driver) => d.driver_number === pred.p2_driver)
-              const d3 = driversJson.drivers?.find((d: Driver) => d.driver_number === pred.p3_driver)
-              const fl = driversJson.drivers?.find((d: Driver) => d.driver_number === pred.fastest_lap_driver)
-              const d1Name = d1?.full_name?.split(' ').pop() || '-'
-              const d2Name = d2?.full_name?.split(' ').pop() || '-'
-              const d3Name = d3?.full_name?.split(' ').pop() || '-'
-              const flName = fl?.full_name?.split(' ').pop() || '-'
-              
-              const breakdown: PointBreakdown[] = []
-              if (results.race) {
-                const podium = [results.race.p1, results.race.p2, results.race.p3]
-                const p1Exact = pred.p1_driver === results.race.p1
-                const p2Exact = pred.p2_driver === results.race.p2
-                const p3Exact = pred.p3_driver === results.race.p3
-                const p1OnPodium = !p1Exact && podium.includes(pred.p1_driver)
-                const p2OnPodium = !p2Exact && podium.includes(pred.p2_driver)
-                const p3OnPodium = !p3Exact && podium.includes(pred.p3_driver)
-                const flCorrect = pred.fastest_lap_driver === results.race.fl
-                const perfectPodium = p1Exact && p2Exact && p3Exact
-
-                breakdown.push({
-                  label: p1Exact ? `P1: ${d1Name} ✓` : p1OnPodium ? `P1: ${d1Name} (Podium, war ${results.race.p1Name})` : `P1: ${d1Name} (war ${results.race.p1Name})`,
-                  points: p1Exact ? POINTS.RACE_P1 : p1OnPodium ? POINTS.RACE_ON_PODIUM : 0,
-                  correct: p1Exact
-                })
-                breakdown.push({
-                  label: p2Exact ? `P2: ${d2Name} ✓` : p2OnPodium ? `P2: ${d2Name} (Podium, war ${results.race.p2Name})` : `P2: ${d2Name} (war ${results.race.p2Name})`,
-                  points: p2Exact ? POINTS.RACE_P2 : p2OnPodium ? POINTS.RACE_ON_PODIUM : 0,
-                  correct: p2Exact
-                })
-                breakdown.push({
-                  label: p3Exact ? `P3: ${d3Name} ✓` : p3OnPodium ? `P3: ${d3Name} (Podium, war ${results.race.p3Name})` : `P3: ${d3Name} (war ${results.race.p3Name})`,
-                  points: p3Exact ? POINTS.RACE_P3 : p3OnPodium ? POINTS.RACE_ON_PODIUM : 0,
-                  correct: p3Exact
-                })
-                if (pred.fastest_lap_driver) {
-                  breakdown.push({
-                    label: flCorrect ? `FL: ${flName} ✓` : `FL: ${flName} (war ${results.race.flName})`,
-                    points: flCorrect ? POINTS.RACE_FASTEST_LAP : 0,
-                    correct: flCorrect
-                  })
-                }
-                if (perfectPodium) {
-                  breakdown.push({
-                    label: '🎯 Perfektes Podium Bonus!',
-                    points: POINTS.RACE_PERFECT_BONUS,
-                    correct: true
-                  })
-                }
-              }
-              
-              formatted.push({
-                type: 'Rennen',
-                user: profile.username,
-                tip: `${d1Name} → ${d2Name} → ${d3Name}${fl ? ` (FL: ${flName})` : ''}`,
-                points: pred.points_earned || 0,
-                result: results.race ? `${results.race.p1Name} → ${results.race.p2Name} → ${results.race.p3Name}` : undefined,
-                breakdown: breakdown.length > 0 ? breakdown : undefined
-              })
+          profilesData.forEach(profile => {
+            byPlayer[profile.id] = {
+              username: profile.username,
+              oderId: profile.id,
+              tips: [],
+              totalEventPoints: 0
             }
           })
           
-          setPredictions(formatted)
+          preds.forEach(pred => {
+            const player = byPlayer[pred.user_id]
+            if (!player) return
+            
+            if (pred.session_type === 'qualifying') {
+              player.tips.push({
+                session: 'qualifying',
+                tipPole: getDriverName(pred.pole_driver),
+                tipPoleNum: pred.pole_driver,
+                points: pred.points_earned || 0
+              })
+              player.totalEventPoints += pred.points_earned || 0
+            } else if (pred.session_type === 'sprint') {
+              player.tips.push({
+                session: 'sprint',
+                tipP1: getDriverName(pred.p1_driver),
+                tipP2: getDriverName(pred.p2_driver),
+                tipP3: getDriverName(pred.p3_driver),
+                tipP1Num: pred.p1_driver,
+                tipP2Num: pred.p2_driver,
+                tipP3Num: pred.p3_driver,
+                points: pred.points_earned || 0
+              })
+              player.totalEventPoints += pred.points_earned || 0
+            } else if (pred.session_type === 'race') {
+              player.tips.push({
+                session: 'race',
+                tipP1: getDriverName(pred.p1_driver),
+                tipP2: getDriverName(pred.p2_driver),
+                tipP3: getDriverName(pred.p3_driver),
+                tipFL: getDriverName(pred.fastest_lap_driver),
+                tipP1Num: pred.p1_driver,
+                tipP2Num: pred.p2_driver,
+                tipP3Num: pred.p3_driver,
+                tipFLNum: pred.fastest_lap_driver,
+                points: pred.points_earned || 0
+              })
+              player.totalEventPoints += pred.points_earned || 0
+            }
+          })
+          
+          // Nur Spieler mit Tipps, sortiert nach Event-Punkten
+          const sorted = Object.values(byPlayer)
+            .filter(p => p.tips.length > 0)
+            .sort((a, b) => b.totalEventPoints - a.totalEventPoints)
+          
+          setPlayerTips(sorted)
         }
       }
     } catch (e) { console.error(e) }
@@ -392,120 +322,258 @@ export default function LeaderboardPage() {
           </div>
         </div>
 
-        {/* Aktuelle Tipps mit Auswertung */}
-        {currentRace && predictions.length > 0 && (
+        {/* Auswertung für aktuelles Event */}
+        {currentRace && playerTips.length > 0 && (
           <div>
             <p className="text-gray-500 text-sm uppercase tracking-wider mb-3">
-              {getCountryFlag(currentRace.race_name)} Tipps für {currentRace.race_name}
+              {getCountryFlag(currentRace.race_name)} Auswertung: {currentRace.race_name}
             </p>
-            <div className="bg-zinc-900 rounded-2xl overflow-hidden">
-              {predictions.map((pred, idx) => {
-                const isExpanded = expandedIdx === idx
-                const hasBreakdown = pred.breakdown && pred.breakdown.length > 0
+            
+            {/* Echte Ergebnisse - nur einmal anzeigen */}
+            <div className="bg-gradient-to-br from-zinc-900 to-zinc-950 rounded-2xl p-5 mb-6 border border-zinc-800">
+              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Offizielle Ergebnisse</h3>
+              
+              <div className="grid gap-4">
+                {/* Qualifying */}
+                {sessionResults.qualifying && (
+                  <div className="flex items-center justify-between p-3 bg-blue-950/30 rounded-xl border border-blue-900/30">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-bold px-2.5 py-1 bg-blue-600 text-white rounded">QUALI</span>
+                      <span className="text-gray-400">Pole Position:</span>
+                    </div>
+                    <span className="text-white font-bold text-lg">{sessionResults.qualifying.poleName}</span>
+                  </div>
+                )}
+                
+                {/* Sprint */}
+                {sessionResults.sprint && (
+                  <div className="p-3 bg-purple-950/30 rounded-xl border border-purple-900/30">
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="text-xs font-bold px-2.5 py-1 bg-purple-600 text-white rounded">SPRINT</span>
+                      <span className="text-gray-400">Podium:</span>
+                    </div>
+                    <div className="flex items-center justify-around">
+                      <div className="text-center">
+                        <span className="text-yellow-400 text-xs font-bold">P1</span>
+                        <p className="text-white font-bold">{sessionResults.sprint.p1Name}</p>
+                      </div>
+                      <div className="text-center">
+                        <span className="text-gray-400 text-xs font-bold">P2</span>
+                        <p className="text-white font-bold">{sessionResults.sprint.p2Name}</p>
+                      </div>
+                      <div className="text-center">
+                        <span className="text-orange-400 text-xs font-bold">P3</span>
+                        <p className="text-white font-bold">{sessionResults.sprint.p3Name}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Race */}
+                {sessionResults.race && (
+                  <div className="p-3 bg-red-950/30 rounded-xl border border-red-900/30">
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="text-xs font-bold px-2.5 py-1 bg-red-600 text-white rounded">RENNEN</span>
+                      <span className="text-gray-400">Podium + FL:</span>
+                    </div>
+                    <div className="flex items-center justify-around">
+                      <div className="text-center">
+                        <span className="text-yellow-400 text-xs font-bold">P1</span>
+                        <p className="text-white font-bold">{sessionResults.race.p1Name}</p>
+                      </div>
+                      <div className="text-center">
+                        <span className="text-gray-400 text-xs font-bold">P2</span>
+                        <p className="text-white font-bold">{sessionResults.race.p2Name}</p>
+                      </div>
+                      <div className="text-center">
+                        <span className="text-orange-400 text-xs font-bold">P3</span>
+                        <p className="text-white font-bold">{sessionResults.race.p3Name}</p>
+                      </div>
+                      <div className="text-center">
+                        <span className="text-purple-400 text-xs font-bold">FL</span>
+                        <p className="text-white font-bold">{sessionResults.race.flName}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {!sessionResults.qualifying && !sessionResults.sprint && !sessionResults.race && (
+                  <p className="text-gray-500 text-center py-4">Noch keine Ergebnisse verfügbar</p>
+                )}
+              </div>
+            </div>
+
+            {/* Spieler-Kacheln */}
+            <div className="space-y-4">
+              {playerTips.map((player, idx) => {
+                const isMe = player.oderId === user?.id
+                const qualiTip = player.tips.find(t => t.session === 'qualifying')
+                const sprintTip = player.tips.find(t => t.session === 'sprint')
+                const raceTip = player.tips.find(t => t.session === 'race')
                 
                 return (
-                  <div key={idx} className="border-b border-zinc-800 last:border-0">
-                    <div 
-                      className={`p-4 ${hasBreakdown ? 'cursor-pointer hover:bg-zinc-800/50' : ''}`}
-                      onClick={() => hasBreakdown && setExpandedIdx(isExpanded ? null : idx)}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                            pred.type === 'Quali' ? 'bg-blue-900 text-blue-300' :
-                            pred.type === 'Sprint' ? 'bg-purple-900 text-purple-300' :
-                            'bg-red-900 text-red-300'
-                          }`}>
-                            {pred.type}
-                          </span>
-                          <span className="text-gray-500 text-sm">{pred.user}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {pred.points > 0 ? (
-                            <span className="text-green-400 font-bold">+{pred.points}</span>
-                          ) : pred.result ? (
-                            <span className="text-gray-600">0</span>
-                          ) : null}
-                          {hasBreakdown && (
-                            isExpanded ? 
-                              <ChevronUp className="w-4 h-4 text-gray-500" /> : 
-                              <ChevronDown className="w-4 h-4 text-gray-500" />
-                          )}
-                        </div>
+                  <div 
+                    key={player.oderId}
+                    className={`rounded-2xl overflow-hidden ${isMe ? 'ring-2 ring-red-500/50' : ''}`}
+                  >
+                    {/* Header */}
+                    <div className={`flex items-center justify-between p-4 ${isMe ? 'bg-red-950/40' : 'bg-zinc-900'}`}>
+                      <div className="flex items-center gap-3">
+                        <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                          idx === 0 ? 'bg-yellow-500 text-black' :
+                          idx === 1 ? 'bg-gray-400 text-black' :
+                          idx === 2 ? 'bg-orange-500 text-black' :
+                          'bg-zinc-700 text-gray-300'
+                        }`}>
+                          {idx + 1}
+                        </span>
+                        <span className={`font-bold text-lg ${isMe ? 'text-red-400' : 'text-white'}`}>
+                          {player.username}
+                        </span>
                       </div>
-                      
-                      {/* Tipp */}
-                      <div className="mt-2">
-                        <p className="text-gray-500 text-xs mb-0.5">Dein Tipp:</p>
-                        <p className="text-white font-medium">{pred.tip}</p>
-                      </div>
-                      
-                      {/* Ergebnis (falls vorhanden) */}
-                      {pred.result && (
-                        <div className="mt-2">
-                          <p className="text-gray-500 text-xs mb-0.5">Ergebnis:</p>
-                          <p className="text-yellow-400 font-medium">{pred.result}</p>
-                        </div>
-                      )}
+                      <span className="text-2xl font-bold text-green-400">+{player.totalEventPoints}</span>
                     </div>
                     
-                    {/* Aufschlüsselung */}
-                    {isExpanded && hasBreakdown && (
-                      <div className="px-4 pb-4 bg-zinc-950/50">
-                        <p className="text-gray-500 text-xs mb-2 uppercase tracking-wider">Punkteaufschlüsselung:</p>
-                        <div className="space-y-1">
-                          {pred.breakdown!.map((item, i) => (
-                            <div 
-                              key={i} 
-                              className={`flex items-center justify-between text-sm p-2 rounded ${
-                                item.correct ? 'bg-green-900/30' : 'bg-zinc-800/50'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                {item.correct ? (
-                                  <Check className="w-4 h-4 text-green-400" />
-                                ) : item.points > 0 ? (
-                                  <Minus className="w-4 h-4 text-yellow-400" />
-                                ) : (
-                                  <X className="w-4 h-4 text-red-400" />
-                                )}
-                                <span className={item.correct ? 'text-green-300' : 'text-gray-400'}>
-                                  {item.label}
-                                </span>
-                              </div>
-                              {item.points > 0 && (
-                                <span className={item.correct ? 'text-green-400 font-bold' : 'text-yellow-400 font-bold'}>
-                                  +{item.points}
-                                </span>
-                              )}
+                    {/* Tipps */}
+                    <div className="bg-zinc-950 p-4 space-y-3">
+                      {/* Quali */}
+                      {qualiTip && sessionResults.qualifying && (
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold px-1.5 py-0.5 bg-blue-900/50 text-blue-400 rounded">Q</span>
+                            <span className="text-gray-400">Pole:</span>
+                            <span className={qualiTip.tipPoleNum === sessionResults.qualifying.pole ? 'text-green-400 font-medium' : 'text-red-400'}>
+                              {qualiTip.tipPole}
+                            </span>
+                            {qualiTip.tipPoleNum === sessionResults.qualifying.pole ? (
+                              <Check className="w-4 h-4 text-green-400" />
+                            ) : (
+                              <X className="w-4 h-4 text-red-400" />
+                            )}
+                          </div>
+                          <span className={qualiTip.points > 0 ? 'text-green-400 font-bold' : 'text-gray-600'}>
+                            {qualiTip.points > 0 ? `+${qualiTip.points}` : '0'}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Sprint */}
+                      {sprintTip && sessionResults.sprint && (
+                        <div className="text-sm">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-bold px-1.5 py-0.5 bg-purple-900/50 text-purple-400 rounded">S</span>
+                            <span className={sprintTip.points > 0 ? 'text-green-400 font-bold' : 'text-gray-600'}>
+                              {sprintTip.points > 0 ? `+${sprintTip.points}` : '0'}
+                            </span>
+                          </div>
+                          <div className="flex gap-4 ml-6">
+                            <div className="flex items-center gap-1">
+                              <span className="text-gray-500">P1:</span>
+                              <span className={sprintTip.tipP1Num === sessionResults.sprint.p1 ? 'text-green-400' : 'text-red-400'}>
+                                {sprintTip.tipP1}
+                              </span>
+                              {sprintTip.tipP1Num === sessionResults.sprint.p1 ? <Check className="w-3 h-3 text-green-400" /> : <X className="w-3 h-3 text-red-400" />}
                             </div>
-                          ))}
+                            <div className="flex items-center gap-1">
+                              <span className="text-gray-500">P2:</span>
+                              <span className={sprintTip.tipP2Num === sessionResults.sprint.p2 ? 'text-green-400' : 'text-red-400'}>
+                                {sprintTip.tipP2}
+                              </span>
+                              {sprintTip.tipP2Num === sessionResults.sprint.p2 ? <Check className="w-3 h-3 text-green-400" /> : <X className="w-3 h-3 text-red-400" />}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-gray-500">P3:</span>
+                              <span className={sprintTip.tipP3Num === sessionResults.sprint.p3 ? 'text-green-400' : 'text-red-400'}>
+                                {sprintTip.tipP3}
+                              </span>
+                              {sprintTip.tipP3Num === sessionResults.sprint.p3 ? <Check className="w-3 h-3 text-green-400" /> : <X className="w-3 h-3 text-red-400" />}
+                            </div>
+                          </div>
                         </div>
-                        
-                        {/* Summe */}
-                        <div className="mt-3 pt-2 border-t border-zinc-700 flex justify-between">
-                          <span className="text-gray-400 font-medium">Gesamt:</span>
-                          <span className="text-white font-bold text-lg">{pred.points} Punkte</span>
+                      )}
+                      
+                      {/* Race */}
+                      {raceTip && sessionResults.race && (
+                        <div className="text-sm">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-bold px-1.5 py-0.5 bg-red-900/50 text-red-400 rounded">R</span>
+                            <span className={raceTip.points > 0 ? 'text-green-400 font-bold' : 'text-gray-600'}>
+                              {raceTip.points > 0 ? `+${raceTip.points}` : '0'}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 ml-6">
+                            <div className="flex items-center gap-1">
+                              <span className="text-gray-500">P1:</span>
+                              <span className={raceTip.tipP1Num === sessionResults.race.p1 ? 'text-green-400' : 
+                                [sessionResults.race.p1, sessionResults.race.p2, sessionResults.race.p3].includes(raceTip.tipP1Num || 0) ? 'text-yellow-400' : 'text-red-400'}>
+                                {raceTip.tipP1}
+                              </span>
+                              {raceTip.tipP1Num === sessionResults.race.p1 ? <Check className="w-3 h-3 text-green-400" /> : 
+                               [sessionResults.race.p1, sessionResults.race.p2, sessionResults.race.p3].includes(raceTip.tipP1Num || 0) ? <span className="text-yellow-400 text-xs">~</span> : <X className="w-3 h-3 text-red-400" />}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-gray-500">P2:</span>
+                              <span className={raceTip.tipP2Num === sessionResults.race.p2 ? 'text-green-400' : 
+                                [sessionResults.race.p1, sessionResults.race.p2, sessionResults.race.p3].includes(raceTip.tipP2Num || 0) ? 'text-yellow-400' : 'text-red-400'}>
+                                {raceTip.tipP2}
+                              </span>
+                              {raceTip.tipP2Num === sessionResults.race.p2 ? <Check className="w-3 h-3 text-green-400" /> : 
+                               [sessionResults.race.p1, sessionResults.race.p2, sessionResults.race.p3].includes(raceTip.tipP2Num || 0) ? <span className="text-yellow-400 text-xs">~</span> : <X className="w-3 h-3 text-red-400" />}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-gray-500">P3:</span>
+                              <span className={raceTip.tipP3Num === sessionResults.race.p3 ? 'text-green-400' : 
+                                [sessionResults.race.p1, sessionResults.race.p2, sessionResults.race.p3].includes(raceTip.tipP3Num || 0) ? 'text-yellow-400' : 'text-red-400'}>
+                                {raceTip.tipP3}
+                              </span>
+                              {raceTip.tipP3Num === sessionResults.race.p3 ? <Check className="w-3 h-3 text-green-400" /> : 
+                               [sessionResults.race.p1, sessionResults.race.p2, sessionResults.race.p3].includes(raceTip.tipP3Num || 0) ? <span className="text-yellow-400 text-xs">~</span> : <X className="w-3 h-3 text-red-400" />}
+                            </div>
+                            {raceTip.tipFL && (
+                              <div className="flex items-center gap-1">
+                                <span className="text-gray-500">FL:</span>
+                                <span className={raceTip.tipFLNum === sessionResults.race.fl ? 'text-green-400' : 'text-red-400'}>
+                                  {raceTip.tipFL}
+                                </span>
+                                {raceTip.tipFLNum === sessionResults.race.fl ? <Check className="w-3 h-3 text-green-400" /> : <X className="w-3 h-3 text-red-400" />}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                      
+                      {player.tips.length === 0 && (
+                        <p className="text-gray-600 text-sm">Keine Tipps abgegeben</p>
+                      )}
+                    </div>
                   </div>
                 )
               })}
             </div>
             
             {/* Legende */}
-            <div className="mt-4 p-4 bg-zinc-900/50 rounded-xl">
-              <p className="text-gray-500 text-xs uppercase tracking-wider mb-2">Punktesystem</p>
-              <div className="grid grid-cols-2 gap-2 text-xs text-gray-400">
-                <div>🏆 Rennen P1: <span className="text-white">25 Pkt</span></div>
-                <div>🏆 Rennen P2: <span className="text-white">18 Pkt</span></div>
-                <div>🏆 Rennen P3: <span className="text-white">15 Pkt</span></div>
-                <div>📍 Auf Podium: <span className="text-white">5 Pkt</span></div>
-                <div>⚡ Schnellste Runde: <span className="text-white">10 Pkt</span></div>
-                <div>🎯 Perfektes Podium: <span className="text-white">+20 Pkt</span></div>
-                <div>🚀 Sprint P1/P2/P3: <span className="text-white">15/10/5</span></div>
-                <div>🔵 Quali Pole: <span className="text-white">10 Pkt</span></div>
+            <div className="mt-6 p-4 bg-zinc-900/50 rounded-xl">
+              <p className="text-gray-500 text-xs uppercase tracking-wider mb-3">Punktesystem</p>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <Check className="w-3 h-3 text-green-400" />
+                  <span className="text-gray-400">Exakt richtig</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-yellow-400 text-xs">~</span>
+                  <span className="text-gray-400">Auf Podium (5 Pkt)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <X className="w-3 h-3 text-red-400" />
+                  <span className="text-gray-400">Falsch</span>
+                </div>
+              </div>
+              <div className="mt-3 pt-3 border-t border-zinc-800 grid grid-cols-2 gap-1.5 text-xs text-gray-500">
+                <div>Rennen P1/P2/P3: <span className="text-white">25/18/15</span></div>
+                <div>Sprint P1/P2/P3: <span className="text-white">15/10/5</span></div>
+                <div>Quali Pole: <span className="text-white">10 Pkt</span></div>
+                <div>Schnellste Runde: <span className="text-white">10 Pkt</span></div>
+                <div>Perfektes Podium: <span className="text-white">+20 Bonus</span></div>
               </div>
             </div>
           </div>
