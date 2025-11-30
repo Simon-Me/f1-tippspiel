@@ -32,3 +32,4 @@ SELECT
 FROM profiles
 ORDER BY total_points DESC;
 
+

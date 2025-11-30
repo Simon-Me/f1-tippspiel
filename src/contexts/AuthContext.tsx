@@ -166,7 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (error) {
         setLoading(false)
-        return { error }
+      return { error }
       }
       
       // Setze User sofort nach erfolgreichem Login

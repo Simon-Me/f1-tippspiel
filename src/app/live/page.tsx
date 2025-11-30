@@ -119,7 +119,7 @@ export default function WMPage() {
   }, [])
 
   useEffect(() => {
-    fetchData()
+      fetchData()
   }, [fetchData])
 
   // Auto-refresh alle 5 Minuten
@@ -232,7 +232,7 @@ export default function WMPage() {
                     <div 
                       className="w-1 h-8 rounded-full"
                       style={{ backgroundColor: getTeamColor(driver.Constructors[0]?.constructorId) }}
-                    />
+                      />
                     <div>
                       <div className="font-medium text-white">
                         {driver.Driver.givenName} <span className="font-bold">{driver.Driver.familyName}</span>
@@ -274,8 +274,8 @@ export default function WMPage() {
                       style={{ backgroundColor: getTeamColor(team.Constructor.constructorId) }}
                     />
                     <div className="font-bold text-white text-lg">{team.Constructor.name}</div>
-                  </div>
-                  <div className="text-right">
+                    </div>
+                    <div className="text-right">
                     <div className="font-bold text-white text-xl">{team.points}</div>
                     <div className="text-xs text-gray-500">{team.wins} Siege</div>
                   </div>
@@ -302,8 +302,8 @@ export default function WMPage() {
                       idx === 1 ? 'bg-gray-400 text-black' :
                       idx === 2 ? 'bg-orange-500 text-black' :
                       'bg-gray-800 text-gray-400'
-                    }`}>
-                      {result.position}
+                  }`}>
+                    {result.position}
                     </span>
                     <div 
                       className="w-1 h-8 rounded-full"
@@ -315,7 +315,7 @@ export default function WMPage() {
                         {result.FastestLap?.rank === '1' && (
                           <span className="ml-2 text-purple-400 text-xs">⚡ FL</span>
                         )}
-                      </div>
+                  </div>
                       <div className="text-xs text-gray-500">{result.Constructor.name}</div>
                     </div>
                   </div>

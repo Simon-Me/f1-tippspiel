@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+// Verwende Service Role Key für volle DB-Rechte (falls vorhanden)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
 // Points system
@@ -61,15 +62,21 @@ export async function POST(request: Request) {
     } = {}
 
     // Finde Rennen in DB
-    const { data: dbRace } = await supabase
+    const { data: dbRace, error: dbError } = await supabase
       .from('races')
       .select('id, race_name')
       .eq('season', 2025)
       .eq('round', raceRound)
       .maybeSingle()
 
+    console.log('Looking for race round:', raceRound, 'Found:', dbRace, 'Error:', dbError)
+
     if (!dbRace) {
-      return NextResponse.json({ error: 'Race not found in database', round: raceRound }, { status: 404 })
+      return NextResponse.json({ 
+        error: 'Race not found in database', 
+        round: raceRound,
+        dbError: dbError?.message 
+      }, { status: 404 })
     }
 
     // === QUALIFYING ===
@@ -248,6 +255,7 @@ export async function POST(request: Request) {
     // Update alle User Gesamtpunkte
     const { data: allProfiles } = await supabase.from('profiles').select('id')
     
+    let updatedProfiles = 0
     for (const profile of allProfiles || []) {
       const { data: userPreds } = await supabase
         .from('predictions')
@@ -257,19 +265,35 @@ export async function POST(request: Request) {
       const totalPoints = userPreds?.reduce((sum, p) => sum + (p.points_earned || 0), 0) || 0
       const predCount = userPreds?.length || 0
 
-      await supabase
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({
           total_points: totalPoints,
           predictions_count: predCount
         })
         .eq('id', profile.id)
+      
+      if (!updateError) updatedProfiles++
     }
+
+    // Markiere Rennen als finished
+    await supabase
+      .from('races')
+      .update({ status: 'finished' })
+      .eq('id', dbRace.id)
+
+    console.log('Points calculated:', {
+      round: raceRound,
+      raceName: dbRace.race_name,
+      profilesUpdated: updatedProfiles,
+      results
+    })
 
     return NextResponse.json({
       success: true,
       round: raceRound,
       raceName: dbRace.race_name,
+      profilesUpdated: updatedProfiles,
       results
     })
 

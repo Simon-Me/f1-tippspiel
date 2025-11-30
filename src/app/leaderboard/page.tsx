@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import Navbar from '@/components/Navbar'
 import { supabase, Profile, Prediction, Race } from '@/lib/supabase'
 import { getCountryFlag } from '@/lib/images'
-import { Crown, Trophy, RefreshCw, TrendingUp, Target, Zap } from 'lucide-react'
+import { Crown, Trophy, RefreshCw, Target, Zap, Calculator, Check, AlertCircle } from 'lucide-react'
 
 interface Driver {
   driver_number: number
@@ -48,15 +48,20 @@ export default function LeaderboardPage() {
     livePoints: number
     total: number
   }[]>([])
+  
+  // Points Calculation
+  const [calculating, setCalculating] = useState(false)
+  const [calcResult, setCalcResult] = useState<{success: boolean, message: string} | null>(null)
+  const [lastRaceWithResults, setLastRaceWithResults] = useState<string | null>(null)
 
   // Daten laden
   const fetchData = useCallback(async () => {
-    try {
+      try {
       // Spieler
       const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('total_points', { ascending: false })
+          .from('profiles')
+          .select('*')
+          .order('total_points', { ascending: false })
       
       if (profilesData) setPlayers(profilesData)
       
@@ -181,6 +186,63 @@ export default function LeaderboardPage() {
     return () => clearInterval(interval)
   }, [fetchLive])
 
+  // Check ob Ergebnisse da sind
+  useEffect(() => {
+    async function checkResults() {
+      try {
+        const res = await fetch('https://api.jolpi.ca/ergast/f1/current/last/results/')
+        const data = await res.json()
+        const race = data.MRData?.RaceTable?.Races?.[0]
+        if (race?.Results?.length > 0) {
+          setLastRaceWithResults(race.raceName)
+        }
+      } catch (e) {
+        console.error(e)
+      }
+    }
+    checkResults()
+  }, [])
+
+  // Punkte berechnen
+  const calculatePoints = async () => {
+    setCalculating(true)
+    setCalcResult(null)
+    
+    try {
+      const res = await fetch('/api/calculate-points', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionType: 'all' })
+      })
+      
+      const data = await res.json()
+      
+      if (data.success) {
+        setCalcResult({
+          success: true,
+          message: `Punkte für ${data.raceName} berechnet!`
+        })
+        // Daten neu laden
+        setTimeout(() => {
+          fetchData()
+          setCalcResult(null)
+        }, 2000)
+      } else {
+        setCalcResult({
+          success: false,
+          message: data.error || 'Fehler beim Berechnen'
+        })
+      }
+    } catch (e) {
+      setCalcResult({
+        success: false,
+        message: 'Server-Fehler'
+      })
+    } finally {
+      setCalculating(false)
+    }
+  }
+
   const getDriverName = (num?: number | null) => {
     if (!num) return '-'
     const driver = drivers.find(d => d.driver_number === num)
@@ -191,7 +253,7 @@ export default function LeaderboardPage() {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
         <RefreshCw className="w-8 h-8 text-red-600 animate-spin" />
-      </div>
+    </div>
     )
   }
 
@@ -202,10 +264,50 @@ export default function LeaderboardPage() {
       <Navbar />
       
       <main className="pt-20 pb-12 px-4 max-w-5xl mx-auto">
-        <div className="flex items-center gap-3 mb-6">
-          <Crown className="w-8 h-8 text-yellow-500" />
-          <h1 className="text-2xl font-bold text-white">Rangliste</h1>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <Crown className="w-8 h-8 text-yellow-500" />
+            <h1 className="text-2xl font-bold text-white">Rangliste</h1>
+          </div>
+          
+          {/* Punkte berechnen Button */}
+          {lastRaceWithResults && (
+            <button
+              onClick={calculatePoints}
+              disabled={calculating}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                calculating 
+                  ? 'bg-gray-700 text-gray-400 cursor-not-allowed' 
+                  : 'bg-blue-600 hover:bg-blue-500 text-white'
+              }`}
+            >
+              {calculating ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Calculator className="w-4 h-4" />
+              )}
+              {calculating ? 'Berechne...' : 'Punkte aktualisieren'}
+            </button>
+          )}
         </div>
+
+        {/* Calc Result */}
+        {calcResult && (
+          <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 ${
+            calcResult.success 
+              ? 'bg-green-900/30 border border-green-700/50' 
+              : 'bg-red-900/30 border border-red-700/50'
+          }`}>
+            {calcResult.success ? (
+              <Check className="w-5 h-5 text-green-400" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-red-400" />
+            )}
+            <span className={calcResult.success ? 'text-green-400' : 'text-red-400'}>
+              {calcResult.message}
+            </span>
+          </div>
+        )}
 
         {/* LIVE SIMULATION */}
         {isLive && simulatedStandings.length > 0 && (
@@ -236,7 +338,7 @@ export default function LeaderboardPage() {
                 ))}
               </div>
             </div>
-            
+
             {/* Live Rangliste */}
             <div className="divide-y divide-green-900/30">
               {simulatedStandings.slice(0, 10).map((standing, idx) => {
@@ -334,12 +436,12 @@ export default function LeaderboardPage() {
                       idx === 1 ? 'bg-gray-400 text-black' :
                       idx === 2 ? 'bg-orange-500 text-black' :
                       'bg-gray-800 text-gray-400'
-                    }`}>
+                  }`}>
                       {idx + 1}
                     </span>
                     <div>
                       <span className={`font-medium ${isMe ? 'text-red-400' : 'text-white'}`}>
-                        {player.username}
+                      {player.username}
                       </span>
                       {isMe && <span className="text-gray-500 text-sm ml-2">(Du)</span>}
                     </div>
@@ -352,7 +454,7 @@ export default function LeaderboardPage() {
               )
             })}
           </div>
-        </div>
+          </div>
 
         {/* Alle Tipps für aktuelles Rennen */}
         {currentRace && (allPredictions.qualifying.length > 0 || allPredictions.sprint.length > 0 || allPredictions.race.length > 0) && (
@@ -426,9 +528,9 @@ export default function LeaderboardPage() {
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
             </div>
+          )}
+        </div>
           </div>
         )}
       </main>

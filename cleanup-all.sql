@@ -18,3 +18,4 @@ SELECT 'predictions', COUNT(*) FROM predictions
 UNION ALL  
 SELECT 'auth.users', COUNT(*) FROM auth.users;
 
+

@@ -15,8 +15,7 @@ import {
   AlertTriangle,
   ChevronRight,
   Calendar,
-  Users,
-  Zap
+  Users
 } from 'lucide-react'
 import { differenceInMinutes, differenceInHours, differenceInDays } from 'date-fns'
 
@@ -37,10 +36,6 @@ export default function DashboardPage() {
   const [nextSession, setNextSession] = useState<SessionTime | null>(null)
   const [hasAllTips, setHasAllTips] = useState(false)
   
-  // Auto Points Status
-  const [pointsStatus, setPointsStatus] = useState<'idle' | 'pending' | 'calculating' | 'done'>('idle')
-  const [pointsMessage, setPointsMessage] = useState<string>('')
-
   useEffect(() => {
     if (!loading && !user) router.push('/login')
   }, [user, loading, router])
@@ -177,60 +172,11 @@ export default function DashboardPage() {
     return () => clearInterval(interval)
   }, [nextSession])
 
-  // Auto Punkte-Check
-  useEffect(() => {
-    if (!nextRace) return
-    
-    async function checkPoints() {
-      const now = new Date()
-      const raceDate = new Date(nextRace.race_date)
-      const hoursDiff = (raceDate.getTime() - now.getTime()) / (1000 * 60 * 60)
-      
-      // Nur checken wenn Rennen kürzlich war
-      if (hoursDiff > 0 || hoursDiff < -12) return
-      
-      try {
-        // Check ob Ergebnisse da sind
-        const res = await fetch(`https://api.jolpi.ca/ergast/f1/2025/${nextRace.round}/results/`)
-        const data = await res.json()
-        const hasResults = (data.MRData?.RaceTable?.Races?.[0]?.Results?.length || 0) > 0
-        
-        if (!hasResults) {
-          setPointsStatus('pending')
-          setPointsMessage('Rennen vorbei - Punkte werden berechnet sobald Ergebnisse verfügbar...')
-          return
-        }
-        
-        // Punkte berechnen
-        setPointsStatus('calculating')
-        setPointsMessage('Ergebnisse da - Punkte werden berechnet...')
-        
-        const calcRes = await fetch('/api/calculate-points', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionType: 'all', round: nextRace.round })
-        })
-        const calcData = await calcRes.json()
-        
-        if (calcData.success) {
-          setPointsStatus('done')
-          setPointsMessage('Punkte wurden aktualisiert!')
-          // Seite neu laden nach 2 Sek
-          setTimeout(() => window.location.reload(), 2000)
-        }
-      } catch (e) {
-        console.error(e)
-      }
-    }
-    
-    checkPoints()
-  }, [nextRace])
-
   if (loading || loadingData) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="w-10 h-10 border-3 border-red-600 border-t-transparent rounded-full animate-spin" />
-      </div>
+      <div className="w-10 h-10 border-3 border-red-600 border-t-transparent rounded-full animate-spin" />
+    </div>
     )
   }
 
@@ -242,30 +188,11 @@ export default function DashboardPage() {
       <Navbar />
       
       <main className="pt-20 pb-12 px-4 max-w-4xl mx-auto">
-        {/* Status Banner */}
-        {pointsStatus !== 'idle' && (
-          <div className={`mb-4 p-4 rounded-xl flex items-center gap-3 ${
-            pointsStatus === 'pending' ? 'bg-yellow-900/30 border border-yellow-700/50' :
-            pointsStatus === 'calculating' ? 'bg-blue-900/30 border border-blue-700/50' :
-            'bg-green-900/30 border border-green-700/50'
-          }`}>
-            {pointsStatus === 'pending' && <Clock className="w-5 h-5 text-yellow-400" />}
-            {pointsStatus === 'calculating' && <Zap className="w-5 h-5 text-blue-400 animate-pulse" />}
-            {pointsStatus === 'done' && <Trophy className="w-5 h-5 text-green-400" />}
-            <span className={`text-sm ${
-              pointsStatus === 'pending' ? 'text-yellow-400' :
-              pointsStatus === 'calculating' ? 'text-blue-400' : 'text-green-400'
-            }`}>
-              {pointsMessage}
-            </span>
-          </div>
-        )}
-
         {/* Welcome */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-white mb-1">
             Hallo, {profile?.username}! 👋
-          </h1>
+              </h1>
           <p className="text-gray-400">F1 Tippspiel Saison 2025</p>
         </div>
 
@@ -326,7 +253,7 @@ export default function DashboardPage() {
                   <Clock className="w-5 h-5" />
                 )}
                 <span className="font-medium">{timeLeft || 'Lädt...'}</span>
-              </div>
+                      </div>
               
               {/* Tipp Status */}
               <div className={`p-3 rounded-lg ${hasAllTips ? 'bg-green-900/30' : 'bg-yellow-900/30'}`}>
@@ -334,10 +261,10 @@ export default function DashboardPage() {
                   <p className="text-green-400 text-sm">✓ Du hast alle Tipps abgegeben!</p>
                 ) : (
                   <p className="text-yellow-400 text-sm">⚠ Du hast noch nicht alle Tipps abgegeben</p>
-                )}
-              </div>
-            </div>
-          </div>
+                          )}
+                        </div>
+                        </div>
+                      </div>
         )}
 
         {/* Quick Actions */}
@@ -366,10 +293,10 @@ export default function DashboardPage() {
                 <div className="font-bold text-white">Rangliste</div>
                 <div className="text-sm text-gray-400">Alle Spieler & Live-Tabelle</div>
               </div>
-            </div>
+          </div>
             <ChevronRight className="w-5 h-5 text-gray-500" />
-          </Link>
-        </div>
+                </Link>
+              </div>
 
         {/* Top 3 Mini */}
         {allPlayers.length >= 3 && (
@@ -387,7 +314,7 @@ export default function DashboardPage() {
                       {idx + 1}
                     </span>
                     <span className={`font-medium ${player.id === user?.id ? 'text-red-400' : 'text-white'}`}>
-                      {player.username}
+                        {player.username}
                       {player.id === user?.id && <span className="text-gray-500 ml-1">(Du)</span>}
                     </span>
                   </div>
@@ -397,7 +324,7 @@ export default function DashboardPage() {
             </div>
             <Link href="/leaderboard" className="block mt-3 text-center text-sm text-red-500 hover:text-red-400">
               Alle Spieler anzeigen →
-            </Link>
+              </Link>
           </div>
         )}
       </main>

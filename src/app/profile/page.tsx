@@ -360,7 +360,7 @@ export default function ProfilePage() {
             </h2>
             <span className="text-sm text-gray-500">{unlockedCount}/{achievements.length}</span>
           </div>
-          
+
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 p-4">
             {achievements.map(achievement => (
               <div 
@@ -386,10 +386,10 @@ export default function ProfilePage() {
                     : 'bg-gray-800 text-gray-600'
                 }`}>
                   {achievement.icon}
-                </div>
+                  </div>
                 <div className={`text-xs font-bold mb-1 ${achievement.unlocked ? 'text-white' : 'text-gray-600'}`}>
                   {achievement.name}
-                </div>
+                  </div>
                 <div className="text-[10px] text-gray-500 leading-tight">
                   {achievement.description}
                 </div>
@@ -403,7 +403,7 @@ export default function ProfilePage() {
                     </div>
                     <div className="text-[10px] text-gray-600 mt-1">
                       {achievement.progress}/{achievement.maxProgress}
-                    </div>
+                </div>
                   </div>
                 )}
               </div>
