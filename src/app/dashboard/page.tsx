@@ -75,9 +75,11 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!nextRace) return
     
+    const raceRound = nextRace.round
+    
     async function getSessionTimes() {
       try {
-        const res = await fetch(`https://api.jolpi.ca/ergast/f1/2025/${nextRace.round}.json`)
+        const res = await fetch(`https://api.jolpi.ca/ergast/f1/2025/${raceRound}.json`)
         const data = await res.json()
         const race = data.MRData?.RaceTable?.Races?.[0]
         if (!race) return
@@ -122,8 +124,10 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!nextRace) return
     
+    const raceRound = nextRace.round
+    
     async function autoCalc() {
-      const lastCalc = localStorage.getItem(`calc_${nextRace.round}`)
+      const lastCalc = localStorage.getItem(`calc_${raceRound}`)
       if (lastCalc && Date.now() - parseInt(lastCalc) < 300000) return // 5 min cache
       
       setCalcStatus('checking')
@@ -131,9 +135,9 @@ export default function DashboardPage() {
       try {
         // Check ob Ergebnisse da sind
         const [qualiRes, sprintRes, raceRes] = await Promise.all([
-          fetch(`https://api.jolpi.ca/ergast/f1/2025/${nextRace.round}/qualifying/`),
-          fetch(`https://api.jolpi.ca/ergast/f1/2025/${nextRace.round}/sprint/`),
-          fetch(`https://api.jolpi.ca/ergast/f1/2025/${nextRace.round}/results/`)
+          fetch(`https://api.jolpi.ca/ergast/f1/2025/${raceRound}/qualifying/`),
+          fetch(`https://api.jolpi.ca/ergast/f1/2025/${raceRound}/sprint/`),
+          fetch(`https://api.jolpi.ca/ergast/f1/2025/${raceRound}/results/`)
         ])
         
         const [qualiData, sprintData, raceData] = await Promise.all([
@@ -155,7 +159,7 @@ export default function DashboardPage() {
           const calcData = await calcRes.json()
           
           if (calcData.success) {
-            localStorage.setItem(`calc_${nextRace.round}`, Date.now().toString())
+            localStorage.setItem(`calc_${raceRound}`, Date.now().toString())
             await fetchData()
             await refreshProfile()
           }
