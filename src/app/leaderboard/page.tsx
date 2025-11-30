@@ -186,10 +186,28 @@ export default function LeaderboardPage() {
     return () => clearInterval(interval)
   }, [fetchLive])
 
-  // Check ob Ergebnisse da sind
+  // Check ob Ergebnisse da sind (Race, Sprint oder Qualifying)
   useEffect(() => {
     async function checkResults() {
       try {
+        // Check for Sprint results (current race)
+        if (currentRace?.round) {
+          const sprintRes = await fetch(`https://api.jolpi.ca/ergast/f1/2025/${currentRace.round}/sprint/`)
+          const sprintData = await sprintRes.json()
+          if (sprintData.MRData?.RaceTable?.Races?.[0]?.SprintResults?.length > 0) {
+            setLastRaceWithResults(currentRace.race_name)
+            return
+          }
+          
+          const qualiRes = await fetch(`https://api.jolpi.ca/ergast/f1/2025/${currentRace.round}/qualifying/`)
+          const qualiData = await qualiRes.json()
+          if (qualiData.MRData?.RaceTable?.Races?.[0]?.QualifyingResults?.length > 0) {
+            setLastRaceWithResults(currentRace.race_name)
+            return
+          }
+        }
+        
+        // Fallback: Last finished race
         const res = await fetch('https://api.jolpi.ca/ergast/f1/current/last/results/')
         const data = await res.json()
         const race = data.MRData?.RaceTable?.Races?.[0]
@@ -201,7 +219,7 @@ export default function LeaderboardPage() {
       }
     }
     checkResults()
-  }, [])
+  }, [currentRace])
 
   // Punkte berechnen
   const calculatePoints = async () => {
@@ -373,46 +391,48 @@ export default function LeaderboardPage() {
         )}
 
         {/* Podium */}
-        {players.length >= 3 && (
-          <div className="flex items-end justify-center gap-2 mb-8">
+        {players.length >= 2 && (
+          <div className="flex items-end justify-center gap-4 mb-8">
             {/* 2. Platz */}
             <div className="flex flex-col items-center">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 flex items-center justify-center text-xl font-bold text-black mb-2">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 flex items-center justify-center text-2xl font-bold text-black mb-2 shadow-lg">
                 {players[1].username.charAt(0).toUpperCase()}
               </div>
-              <div className="text-gray-300 font-medium text-sm truncate max-w-16">{players[1].username}</div>
-              <div className="text-gray-400 text-xs">{players[1].total_points} Pkt</div>
-              <div className="w-16 h-14 bg-gradient-to-t from-gray-600 to-gray-500 rounded-t-lg mt-2 flex items-center justify-center">
-                <span className="text-xl font-bold text-white">2</span>
+              <div className="text-gray-300 font-medium truncate max-w-20">{players[1].username}</div>
+              <div className="text-gray-400 text-sm">{players[1].total_points} Pkt</div>
+              <div className="w-20 h-16 bg-gradient-to-t from-gray-600 to-gray-500 rounded-t-lg mt-2 flex items-center justify-center shadow-lg">
+                <span className="text-2xl font-bold text-white">2</span>
               </div>
             </div>
             
             {/* 1. Platz */}
-            <div className="flex flex-col items-center -mt-4">
+            <div className="flex flex-col items-center -mt-6">
               <div className="relative">
-                <div className="w-18 h-18 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-2xl font-bold text-black mb-2" style={{width: '4.5rem', height: '4.5rem'}}>
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-3xl font-bold text-black mb-2 shadow-lg ring-4 ring-yellow-500/30">
                   {players[0].username.charAt(0).toUpperCase()}
                 </div>
-                <Crown className="absolute -top-2 left-1/2 -translate-x-1/2 w-6 h-6 text-yellow-400" />
+                <Crown className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-8 text-yellow-400 drop-shadow-lg" />
               </div>
-              <div className="text-yellow-400 font-bold truncate max-w-20">{players[0].username}</div>
-              <div className="text-yellow-500 text-sm font-medium">{players[0].total_points} Pkt</div>
-              <div className="w-20 h-20 bg-gradient-to-t from-yellow-600 to-yellow-500 rounded-t-lg mt-2 flex items-center justify-center">
-                <span className="text-2xl font-bold text-black">1</span>
+              <div className="text-yellow-400 font-bold text-lg truncate max-w-24">{players[0].username}</div>
+              <div className="text-yellow-500 font-medium">{players[0].total_points} Pkt</div>
+              <div className="w-24 h-24 bg-gradient-to-t from-yellow-600 to-yellow-500 rounded-t-lg mt-2 flex items-center justify-center shadow-lg">
+                <span className="text-3xl font-bold text-black">1</span>
               </div>
             </div>
             
-            {/* 3. Platz */}
-            <div className="flex flex-col items-center">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-xl font-bold text-black mb-2">
-                {players[2].username.charAt(0).toUpperCase()}
+            {/* 3. Platz - nur wenn vorhanden */}
+            {players[2] && (
+              <div className="flex flex-col items-center">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-xl font-bold text-black mb-2 shadow-lg">
+                  {players[2].username.charAt(0).toUpperCase()}
+                </div>
+                <div className="text-orange-400 font-medium text-sm truncate max-w-16">{players[2].username}</div>
+                <div className="text-orange-500 text-xs">{players[2].total_points} Pkt</div>
+                <div className="w-16 h-12 bg-gradient-to-t from-orange-700 to-orange-600 rounded-t-lg mt-2 flex items-center justify-center shadow-lg">
+                  <span className="text-xl font-bold text-white">3</span>
+                </div>
               </div>
-              <div className="text-orange-400 font-medium text-sm truncate max-w-16">{players[2].username}</div>
-              <div className="text-orange-500 text-xs">{players[2].total_points} Pkt</div>
-              <div className="w-16 h-10 bg-gradient-to-t from-orange-700 to-orange-600 rounded-t-lg mt-2 flex items-center justify-center">
-                <span className="text-xl font-bold text-white">3</span>
-              </div>
-            </div>
+            )}
           </div>
         )}
 
