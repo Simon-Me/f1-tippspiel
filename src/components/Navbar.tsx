@@ -61,6 +61,10 @@ export default function Navbar() {
                   <TrendingUp className="w-4 h-4" />
                   WM
                 </Link>
+                <Link href="/bets" className="nav-link flex items-center gap-2 text-green-400 hover:text-green-300">
+                  <Coins className="w-4 h-4" />
+                  Bets
+                </Link>
                 <Link href="/shop" className="nav-link flex items-center gap-2 text-yellow-400 hover:text-yellow-300">
                   <ShoppingBag className="w-4 h-4" />
                   Shop
@@ -149,6 +153,14 @@ export default function Navbar() {
                 >
                   <TrendingUp className="w-5 h-5" />
                   WM
+                </Link>
+                <Link 
+                  href="/bets" 
+                  className="flex items-center gap-3 py-2 text-green-400 hover:text-green-300"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Coins className="w-5 h-5" />
+                  Bets
                 </Link>
                 <Link 
                   href="/shop" 

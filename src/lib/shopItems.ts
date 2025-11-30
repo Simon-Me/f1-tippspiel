@@ -1,13 +1,16 @@
 import { ShopItem } from './supabase'
 
+// Startguthaben für neue Spieler
+export const STARTING_COINS = 250
+
 export const SHOP_ITEMS: ShopItem[] = [
-  // === HELME ===
+  // === HELME === (Legendary: 300, Epic: 200, Rare: 120, Common: 50)
   {
     id: 'helmet_verstappen',
     name: 'Verstappen Helm',
     description: 'Der ikonische blaue Helm des 4-fachen Weltmeisters',
     category: 'helmet',
-    price: 500,
+    price: 300,
     rarity: 'legendary',
     image_url: '🪖',
     team: 'Red Bull Racing',
@@ -19,7 +22,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     name: 'Hamilton Helm',
     description: 'Der legendäre lila Helm des 7-fachen Weltmeisters',
     category: 'helmet',
-    price: 500,
+    price: 300,
     rarity: 'legendary',
     image_url: '🪖',
     team: 'Ferrari',
@@ -31,7 +34,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     name: 'Leclerc Helm',
     description: 'Der elegante rote Helm des Ferrari-Stars',
     category: 'helmet',
-    price: 400,
+    price: 200,
     rarity: 'epic',
     image_url: '🪖',
     team: 'Ferrari',
@@ -43,7 +46,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     name: 'Norris Helm',
     description: 'Der bunte Helm des McLaren-Fahrers',
     category: 'helmet',
-    price: 400,
+    price: 200,
     rarity: 'epic',
     image_url: '🪖',
     team: 'McLaren',
@@ -55,7 +58,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     name: 'Alonso Helm',
     description: 'Der klassische Helm der F1-Legende',
     category: 'helmet',
-    price: 350,
+    price: 120,
     rarity: 'rare',
     image_url: '🪖',
     team: 'Aston Martin',
@@ -67,7 +70,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     name: 'Roter Racing Helm',
     description: 'Ein klassischer roter Rennhelm',
     category: 'helmet',
-    price: 100,
+    price: 50,
     rarity: 'common',
     image_url: '🪖',
     available: true
@@ -77,19 +80,19 @@ export const SHOP_ITEMS: ShopItem[] = [
     name: 'Blauer Racing Helm',
     description: 'Ein klassischer blauer Rennhelm',
     category: 'helmet',
-    price: 100,
+    price: 50,
     rarity: 'common',
     image_url: '🪖',
     available: true
   },
 
-  // === AUTOS ===
+  // === AUTOS === (Legendary: 500, Epic: 350, Rare: 200, Common: 80)
   {
     id: 'car_redbull_rb20',
     name: 'Red Bull RB20',
     description: 'Das dominante Auto der 2024 Saison',
     category: 'car',
-    price: 1000,
+    price: 500,
     rarity: 'legendary',
     image_url: '🏎️',
     team: 'Red Bull Racing',
@@ -100,7 +103,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     name: 'McLaren MCL38',
     description: 'Das schnelle Papaya-Orange Biest',
     category: 'car',
-    price: 800,
+    price: 350,
     rarity: 'epic',
     image_url: '🏎️',
     team: 'McLaren',
@@ -111,7 +114,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     name: 'Ferrari SF-24',
     description: 'Die rote Göttin aus Maranello',
     category: 'car',
-    price: 800,
+    price: 350,
     rarity: 'epic',
     image_url: '🏎️',
     team: 'Ferrari',
@@ -122,7 +125,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     name: 'Mercedes W15',
     description: 'Der Silberpfeil',
     category: 'car',
-    price: 600,
+    price: 200,
     rarity: 'rare',
     image_url: '🏎️',
     team: 'Mercedes',
@@ -133,7 +136,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     name: 'Aston Martin AMR24',
     description: 'Das grüne Juwel',
     category: 'car',
-    price: 500,
+    price: 200,
     rarity: 'rare',
     image_url: '🏎️',
     team: 'Aston Martin',
@@ -144,19 +147,19 @@ export const SHOP_ITEMS: ShopItem[] = [
     name: 'F1 Bolide',
     description: 'Ein klassischer Formel 1 Wagen',
     category: 'car',
-    price: 200,
+    price: 80,
     rarity: 'common',
     image_url: '🏎️',
     available: true
   },
 
-  // === TROPHÄEN ===
+  // === TROPHÄEN === (Legendary: 750, Rare: 150, Common: 60)
   {
     id: 'trophy_wdc',
     name: 'WM-Pokal',
     description: 'Die ultimative Trophäe - der Weltmeister-Pokal',
     category: 'trophy',
-    price: 2000,
+    price: 750,
     rarity: 'legendary',
     image_url: '🏆',
     available: true
@@ -166,7 +169,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     name: 'Rennsieg-Trophäe',
     description: 'Eine Trophäe für den Rennsieg',
     category: 'trophy',
-    price: 300,
+    price: 150,
     rarity: 'rare',
     image_url: '🥇',
     available: true
@@ -176,19 +179,19 @@ export const SHOP_ITEMS: ShopItem[] = [
     name: 'Podiums-Trophäe',
     description: 'Eine Trophäe fürs Podium',
     category: 'trophy',
-    price: 150,
+    price: 60,
     rarity: 'common',
     image_url: '🥈',
     available: true
   },
 
-  // === BADGES ===
+  // === BADGES === (Epic: 150, Rare: 100)
   {
     id: 'badge_monaco',
     name: 'Monaco Badge',
     description: 'Die Krone der F1 - Monte Carlo',
     category: 'badge',
-    price: 250,
+    price: 150,
     rarity: 'epic',
     image_url: '🎰',
     available: true
@@ -198,7 +201,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     name: 'Monza Badge',
     description: 'Der Tempel der Geschwindigkeit',
     category: 'badge',
-    price: 200,
+    price: 100,
     rarity: 'rare',
     image_url: '🇮🇹',
     available: true
@@ -208,7 +211,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     name: 'Silverstone Badge',
     description: 'Die Heimat des Motorsports',
     category: 'badge',
-    price: 200,
+    price: 100,
     rarity: 'rare',
     image_url: '🇬🇧',
     available: true
@@ -218,7 +221,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     name: 'Spa Badge',
     description: 'Eau Rouge - Die legendäre Strecke',
     category: 'badge',
-    price: 200,
+    price: 100,
     rarity: 'rare',
     image_url: '🇧🇪',
     available: true
@@ -228,19 +231,19 @@ export const SHOP_ITEMS: ShopItem[] = [
     name: 'Suzuka Badge',
     description: 'Die Achterbahn Japans',
     category: 'badge',
-    price: 200,
+    price: 100,
     rarity: 'rare',
     image_url: '🇯🇵',
     available: true
   },
 
-  // === SPECIAL ===
+  // === SPECIAL === (Epic: 180, Rare: 80, Common: 40)
   {
     id: 'special_drs',
     name: 'DRS Zone',
     description: 'Der Überholbooster',
     category: 'special',
-    price: 150,
+    price: 80,
     rarity: 'rare',
     image_url: '⚡',
     available: true
@@ -250,7 +253,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     name: 'Pit Crew',
     description: 'Dein eigenes Boxenteam',
     category: 'special',
-    price: 400,
+    price: 180,
     rarity: 'epic',
     image_url: '🔧',
     available: true
@@ -260,7 +263,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     name: 'Podiums-Champagner',
     description: 'Feier wie ein Champion',
     category: 'special',
-    price: 100,
+    price: 40,
     rarity: 'common',
     image_url: '🍾',
     available: true
@@ -270,7 +273,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     name: 'Zielflagge',
     description: 'Das Zeichen des Sieges',
     category: 'special',
-    price: 75,
+    price: 30,
     rarity: 'common',
     image_url: '🏁',
     available: true

@@ -1,13 +1,13 @@
--- F1 Tippspiel Shop System - Datenbank Setup
+-- F1 Tippspiel Shop & Bets System - Datenbank Setup
 -- Führe dieses Script im Supabase SQL Editor aus
 
--- 1. Füge coins Spalte zu profiles hinzu
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS coins INTEGER DEFAULT 0;
+-- 1. Füge coins Spalte zu profiles hinzu (falls nicht vorhanden)
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS coins INTEGER DEFAULT 250;
 
--- 2. Setze initiale Coins auf aktuelle Punkte (einmalig)
-UPDATE profiles SET coins = total_points WHERE coins = 0 OR coins IS NULL;
+-- 2. Setze Startguthaben für alle User die noch keine Coins haben
+UPDATE profiles SET coins = 250 WHERE coins IS NULL OR coins = 0;
 
--- 3. Erstelle user_items Tabelle
+-- 3. Erstelle user_items Tabelle (für Shop)
 CREATE TABLE IF NOT EXISTS user_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
@@ -17,33 +17,61 @@ CREATE TABLE IF NOT EXISTS user_items (
   UNIQUE(user_id, item_id)
 );
 
--- 4. RLS Policies für user_items
+-- 4. Erstelle bets Tabelle (für Money Bets)
+CREATE TABLE IF NOT EXISTS bets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  race_id INTEGER REFERENCES races(id) ON DELETE CASCADE NOT NULL,
+  bet_type TEXT NOT NULL,
+  selection TEXT NOT NULL,
+  amount INTEGER NOT NULL,
+  odds DECIMAL(3,2) NOT NULL,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'won', 'lost')),
+  winnings INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 5. RLS Policies für user_items
 ALTER TABLE user_items ENABLE ROW LEVEL SECURITY;
 
--- Jeder kann Items aller User sehen (für Sammlung-Anzeige)
+DROP POLICY IF EXISTS "User items sind öffentlich sichtbar" ON user_items;
 CREATE POLICY "User items sind öffentlich sichtbar" ON user_items
   FOR SELECT USING (true);
 
--- User können nur ihre eigenen Items einfügen
+DROP POLICY IF EXISTS "User können eigene Items kaufen" ON user_items;
 CREATE POLICY "User können eigene Items kaufen" ON user_items
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
--- User können nur ihre eigenen Items updaten (equipped)
+DROP POLICY IF EXISTS "User können eigene Items updaten" ON user_items;
 CREATE POLICY "User können eigene Items updaten" ON user_items
   FOR UPDATE USING (auth.uid() = user_id);
 
--- 5. Index für schnellere Abfragen
+-- 6. RLS Policies für bets
+ALTER TABLE bets ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Bets sind öffentlich sichtbar" ON bets;
+CREATE POLICY "Bets sind öffentlich sichtbar" ON bets
+  FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "User können eigene Bets erstellen" ON bets;
+CREATE POLICY "User können eigene Bets erstellen" ON bets
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "User können eigene Bets updaten" ON bets;
+CREATE POLICY "User können eigene Bets updaten" ON bets
+  FOR UPDATE USING (auth.uid() = user_id);
+
+-- 7. Indexes für Performance
 CREATE INDEX IF NOT EXISTS idx_user_items_user_id ON user_items(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_items_item_id ON user_items(item_id);
+CREATE INDEX IF NOT EXISTS idx_bets_user_id ON bets(user_id);
+CREATE INDEX IF NOT EXISTS idx_bets_race_id ON bets(race_id);
+CREATE INDEX IF NOT EXISTS idx_bets_status ON bets(status);
 
--- 6. Aktualisiere profiles RLS Policy für coins
--- (Falls nötig - nur wenn coins nicht updatebar sind)
--- DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
--- CREATE POLICY "Users can update own profile" ON profiles
---   FOR UPDATE USING (auth.uid() = id);
-
--- Erlaube API (Service Role) auch Updates
--- Das ist bereits durch den Service Role Key abgedeckt
-
--- Fertig! 🏎️
-
+-- Fertig! 🏎️💰
+-- 
+-- COIN SYSTEM:
+-- - Startguthaben: 250 Coins
+-- - Normale Tipps: 1:1 (25 Punkte = 25 Coins)
+-- - Money Bets: Einsatz 10-100 Coins, Quoten 1.5x - 5x
+-- - Shop: Items von 30 - 750 Coins

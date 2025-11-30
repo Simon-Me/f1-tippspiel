@@ -257,22 +257,29 @@ export default function ShopPage() {
             <Coins className="w-5 h-5 text-yellow-400" />
             Wie bekomme ich Coins?
           </h3>
-          <p className="text-gray-400">
-            Du erhältst für jeden Punkt den du mit deinen Tipps verdienst auch einen Coin.
-            Punkte zeigen deinen Rang, Coins kannst du im Shop ausgeben!
-          </p>
-          <div className="mt-4 flex gap-4 text-sm">
-            <div className="bg-zinc-800 px-3 py-2 rounded-lg">
-              <span className="text-gray-500">Quali Pole =</span>
-              <span className="text-yellow-400 font-bold ml-1">10 Coins</span>
-            </div>
-            <div className="bg-zinc-800 px-3 py-2 rounded-lg">
-              <span className="text-gray-500">Sprint P1 =</span>
-              <span className="text-yellow-400 font-bold ml-1">15 Coins</span>
-            </div>
+          <div className="space-y-3 text-gray-400 text-sm">
+            <p>
+              <span className="text-white font-medium">🎯 Normale Tipps:</span> Für jeden Punkt bekommst du auch einen Coin.
+            </p>
+            <p>
+              <span className="text-white font-medium">💰 Money Bets:</span> Extra-Wetten mit Quoten bis 5x!
+            </p>
+            <p>
+              <span className="text-white font-medium">🎁 Startguthaben:</span> Neue Spieler erhalten 250 Coins.
+            </p>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-3 text-sm">
             <div className="bg-zinc-800 px-3 py-2 rounded-lg">
               <span className="text-gray-500">Race P1 =</span>
-              <span className="text-yellow-400 font-bold ml-1">25 Coins</span>
+              <span className="text-yellow-400 font-bold ml-1">+25</span>
+            </div>
+            <div className="bg-zinc-800 px-3 py-2 rounded-lg">
+              <span className="text-gray-500">Perfektes Podium =</span>
+              <span className="text-yellow-400 font-bold ml-1">+78</span>
+            </div>
+            <div className="bg-zinc-800 px-3 py-2 rounded-lg">
+              <span className="text-gray-500">Money Bet 2x =</span>
+              <span className="text-green-400 font-bold ml-1">2x Einsatz</span>
             </div>
           </div>
         </div>

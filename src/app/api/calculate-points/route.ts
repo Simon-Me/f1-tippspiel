@@ -270,7 +270,7 @@ export async function POST(request: Request) {
     }
 
     // Update alle User Gesamtpunkte UND Coins
-    const { data: allProfiles } = await supabase.from('profiles').select('id, coins')
+    const { data: allProfiles } = await supabase.from('profiles').select('id, coins, total_points')
     
     let updatedProfiles = 0
     for (const profile of allProfiles || []) {
@@ -279,24 +279,23 @@ export async function POST(request: Request) {
         .select('points_earned')
         .eq('user_id', profile.id)
 
-      const totalPoints = userPreds?.reduce((sum, p) => sum + (p.points_earned || 0), 0) || 0
+      const newTotalPoints = userPreds?.reduce((sum, p) => sum + (p.points_earned || 0), 0) || 0
       const predCount = userPreds?.length || 0
       
-      // Coins = Gesamtpunkte (aber nicht reduzieren wenn Items gekauft)
-      // Wir berechnen neue Coins basierend auf Punkten und behalten existierende
+      // Berechne wie viele neue Punkte dazugekommen sind
+      const oldTotalPoints = profile.total_points || 0
+      const pointsDiff = Math.max(0, newTotalPoints - oldTotalPoints)
+      
+      // Addiere die neuen Punkte zu den Coins (nicht überschreiben!)
       const currentCoins = profile.coins || 0
-      // Coins sind synchron mit Punkten, außer wenn ausgegeben
-      // Neue Punkte = neue Coins dazu (Differenz zum vorherigen Stand)
+      const newCoins = currentCoins + pointsDiff
 
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
-          total_points: totalPoints,
+          total_points: newTotalPoints,
           predictions_count: predCount,
-          // Coins werden nur erhöht wenn neue Punkte dazukommen
-          // Setze Coins auf max(aktuelle coins, total points) um sicherzustellen 
-          // dass bei Neuberechnung keine Coins verloren gehen
-          coins: Math.max(currentCoins, totalPoints)
+          coins: newCoins
         })
         .eq('id', profile.id)
       
