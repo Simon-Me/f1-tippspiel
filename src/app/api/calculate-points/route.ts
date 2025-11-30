@@ -45,15 +45,32 @@ export async function POST(request: Request) {
     let raceRound = round
     
     if (!raceRound) {
-      // Hole letzte Runde aus API
-      const lastRes = await fetch('https://api.jolpi.ca/ergast/f1/current/last/results/')
-      const lastData = await lastRes.json()
-      raceRound = parseInt(lastData.MRData?.RaceTable?.Races?.[0]?.round || '0')
+      // Suche aktuelles/letztes Rennen in der DB (letzte 3 Tage)
+      const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+      const { data: currentRace } = await supabase
+        .from('races')
+        .select('round')
+        .eq('season', 2025)
+        .gte('race_date', threeDaysAgo)
+        .order('race_date', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+      
+      if (currentRace) {
+        raceRound = currentRace.round
+      } else {
+        // Fallback: Hole letzte Runde aus API
+        const lastRes = await fetch('https://api.jolpi.ca/ergast/f1/current/last/results/')
+        const lastData = await lastRes.json()
+        raceRound = parseInt(lastData.MRData?.RaceTable?.Races?.[0]?.round || '0')
+      }
     }
 
     if (!raceRound) {
       return NextResponse.json({ error: 'Could not determine race round' }, { status: 400 })
     }
+    
+    console.log('Calculating points for round:', raceRound)
 
     const results: {
       qualifying?: { pole: string | null, points: number[] }
