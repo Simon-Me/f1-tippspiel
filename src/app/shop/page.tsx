@@ -21,12 +21,14 @@ export default function ShopPage() {
   useEffect(() => {
     if (!user) return
     
+    const userId = user.id
+    
     async function loadData() {
       // Lade Coins
       const { data: profile } = await supabase
         .from('profiles')
         .select('coins')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single()
       
       if (profile) setCoins(profile.coins || 0)
@@ -35,7 +37,7 @@ export default function ShopPage() {
       const { data: items } = await supabase
         .from('user_items')
         .select('item_id')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
       
       if (items) setOwnedItems(items.map(i => i.item_id))
       
@@ -47,6 +49,9 @@ export default function ShopPage() {
 
   const buyItem = async (itemId: string, price: number) => {
     if (!user) return
+    
+    const userId = user.id
+    
     if (coins < price) {
       setMessage({ type: 'error', text: 'Nicht genug Coins!' })
       setTimeout(() => setMessage(null), 3000)
@@ -61,7 +66,7 @@ export default function ShopPage() {
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ coins: coins - price })
-        .eq('id', user.id)
+        .eq('id', userId)
 
       if (updateError) throw updateError
 
@@ -69,7 +74,7 @@ export default function ShopPage() {
       const { error: insertError } = await supabase
         .from('user_items')
         .insert({
-          user_id: user.id,
+          user_id: userId,
           item_id: itemId,
           equipped: false
         })

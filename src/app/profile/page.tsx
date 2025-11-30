@@ -71,9 +71,11 @@ export default function ProfilePage() {
   }, [user, loading, router])
 
   useEffect(() => {
+    if (!user) return
+    
+    const userId = user.id
+    
     async function fetchProfileData() {
-      if (!user) return
-
       try {
         // Fahrer laden
         try {
@@ -90,7 +92,7 @@ export default function ProfilePage() {
         const { data: profileCoins } = await supabase
           .from('profiles')
           .select('coins')
-          .eq('id', user.id)
+          .eq('id', userId)
           .single()
         
         if (profileCoins) setCoins(profileCoins.coins || 0)
@@ -99,7 +101,7 @@ export default function ProfilePage() {
         const { data: userItems } = await supabase
           .from('user_items')
           .select('item_id')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
         
         if (userItems) {
           const owned = userItems
@@ -120,7 +122,7 @@ export default function ProfilePage() {
         const { data: predictionsData } = await supabase
           .from('predictions')
           .select(`*, race:races(*)`)
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .order('submitted_at', { ascending: false })
 
         if (predictionsData) {
