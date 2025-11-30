@@ -93,9 +93,11 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!nextRace) return
     
+    const raceRound = nextRace.round
+    
     async function fetchSessionTimes() {
       try {
-        const res = await fetch(`https://api.jolpi.ca/ergast/f1/2025/${nextRace.round}.json`)
+        const res = await fetch(`https://api.jolpi.ca/ergast/f1/2025/${raceRound}.json`)
         const data = await res.json()
         const race = data.MRData?.RaceTable?.Races?.[0]
         if (!race) return
