@@ -24,7 +24,9 @@ import {
   ShoppingBag,
   Camera,
   Loader2,
-  Check
+  Check,
+  X,
+  Search
 } from 'lucide-react'
 import { CAR_ITEMS, RARITY_COLORS, CarItem } from '@/lib/shopItems'
 import { format } from 'date-fns'
@@ -68,6 +70,10 @@ export default function ProfilePage() {
   const [uploading, setUploading] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [championTip, setChampionTip] = useState<number | null>(null)
+  const [championTipId, setChampionTipId] = useState<string | null>(null)
+  const [championLocked, setChampionLocked] = useState(false)
+  const [championModalOpen, setChampionModalOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
   const [equippedCarId, setEquippedCarId] = useState<string>('default')
 
   useEffect(() => {
@@ -207,13 +213,27 @@ export default function ProfilePage() {
         // Weltmeister-Tipp laden
         const { data: seasonTip } = await supabase
           .from('season_predictions')
-          .select('wdc_p1_driver')
+          .select('id, wdc_p1_driver')
           .eq('user_id', userId)
           .eq('season', 2025)
           .maybeSingle()
         
-        if (seasonTip?.wdc_p1_driver) {
+        if (seasonTip) {
+          setChampionTipId(seasonTip.id)
           setChampionTip(seasonTip.wdc_p1_driver)
+        }
+
+        // Prüfen ob Saison gestartet
+        const { data: firstRace } = await supabase
+          .from('races')
+          .select('race_date')
+          .eq('season', 2025)
+          .order('round', { ascending: true })
+          .limit(1)
+          .maybeSingle()
+
+        if (firstRace && new Date(firstRace.race_date) < new Date()) {
+          setChampionLocked(true)
         }
 
         // Alle Spieler für Ranking
@@ -513,10 +533,17 @@ export default function ProfilePage() {
         </div>
 
         {/* Weltmeister-Tipp */}
-        <div className="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 rounded-xl p-4 border border-yellow-800/50 mb-6">
+        <button
+          onClick={() => !championLocked && setChampionModalOpen(true)}
+          disabled={championLocked}
+          className={`w-full text-left bg-gradient-to-r from-yellow-900/30 to-orange-900/30 rounded-xl p-4 border border-yellow-800/50 mb-6 transition-all ${
+            !championLocked ? 'hover:border-yellow-600 cursor-pointer' : 'opacity-80'
+          }`}
+        >
           <div className="text-xs text-yellow-500 mb-2 flex items-center gap-2">
             <Crown className="w-4 h-4" />
             DEIN WELTMEISTER-TIPP 2025
+            {championLocked && <Lock className="w-3 h-3 text-yellow-600" />}
           </div>
           {championTip ? (
             <div className="flex items-center justify-between">
@@ -530,14 +557,16 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-lg text-gray-400">Noch nicht getippt</div>
-                <div className="text-sm text-yellow-400/70">Tippe vor dem ersten Rennen!</div>
+                <div className="text-sm text-yellow-400/70">{championLocked ? 'Saison hat begonnen' : 'Klicke um zu tippen!'}</div>
               </div>
-              <Link href="/season-tips" className="px-4 py-2 bg-yellow-600 text-black font-bold rounded-lg hover:bg-yellow-500 text-sm">
-                Jetzt tippen
-              </Link>
+              {!championLocked && (
+                <span className="px-4 py-2 bg-yellow-600 text-black font-bold rounded-lg text-sm">
+                  Tippen →
+                </span>
+              )}
             </div>
           )}
-        </div>
+        </button>
 
         {/* Favorite Driver */}
         {stats.favDriver && (
@@ -719,11 +748,8 @@ export default function ProfilePage() {
 
         {/* Recent Predictions */}
         <div className="bg-[#111] rounded-xl border border-gray-800 overflow-hidden">
-          <div className="p-4 border-b border-gray-800 flex items-center justify-between">
+          <div className="p-4 border-b border-gray-800">
             <h2 className="font-bold text-white">Letzte Tipps</h2>
-            <Link href="/history" className="text-sm text-red-500 hover:underline">
-              Alle ansehen →
-            </Link>
           </div>
           
           <div className="divide-y divide-gray-800/50">
@@ -753,6 +779,95 @@ export default function ProfilePage() {
           )}
         </div>
       </main>
+
+      {/* Weltmeister Modal */}
+      {championModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-end md:items-center justify-center p-4">
+          <div className="bg-[#111] rounded-t-2xl md:rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
+            <div className="p-4 border-b border-gray-800 flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="font-bold text-lg">Weltmeister 2025</h3>
+                <p className="text-sm text-gray-500">+100 Punkte wenn richtig!</p>
+              </div>
+              <button onClick={() => setChampionModalOpen(false)} className="p-2 hover:bg-gray-800 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 border-b border-gray-800 shrink-0">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                <input
+                  type="text"
+                  placeholder="Fahrer suchen..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-[#0a0a0a] border border-gray-700 rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:border-yellow-600"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="grid grid-cols-2 gap-3">
+                {drivers
+                  .filter(d => 
+                    d.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    d.team_name.toLowerCase().includes(searchTerm.toLowerCase())
+                  )
+                  .map((driver) => (
+                  <button
+                    key={driver.driver_number}
+                    onClick={async () => {
+                      if (!user) return
+                      
+                      const data = {
+                        user_id: user.id,
+                        season: 2025,
+                        wdc_p1_driver: driver.driver_number,
+                      }
+
+                      if (championTipId) {
+                        await supabase.from('season_predictions').update(data).eq('id', championTipId)
+                      } else {
+                        const { data: newTip } = await supabase.from('season_predictions').insert(data).select('id').single()
+                        if (newTip) setChampionTipId(newTip.id)
+                      }
+                      
+                      setChampionTip(driver.driver_number)
+                      setChampionModalOpen(false)
+                      setSearchTerm('')
+                    }}
+                    className={`p-3 rounded-xl bg-[#0a0a0a] hover:bg-[#1a1a1a] border transition-all text-left ${
+                      championTip === driver.driver_number
+                        ? 'border-yellow-500 ring-2 ring-yellow-500/30'
+                        : 'border-gray-800 hover:border-gray-600'
+                    }`}
+                  >
+                    <div
+                      className="w-full aspect-square rounded-lg overflow-hidden mb-3"
+                      style={{ backgroundColor: driver.team_color || '#333' }}
+                    >
+                      <img
+                        src={`https://media.formula1.com/d_driver_fallback_image.png/content/dam/fom-website/drivers/2025Drivers/${driver.full_name?.split(' ').pop()?.toLowerCase() || 'driver'}.png.transform/1col/image.png`}
+                        alt={driver.full_name}
+                        className="w-full h-full object-cover object-top"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://media.formula1.com/d_driver_fallback_image.png/content/dam/fom-website/drivers/driver_fallback.png.transform/1col/image.png'
+                        }}
+                      />
+                    </div>
+                    <div className="text-center">
+                      <div className="font-bold text-white text-sm truncate">{driver.full_name}</div>
+                      <div className="text-xs text-gray-500 truncate">{driver.team_name}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

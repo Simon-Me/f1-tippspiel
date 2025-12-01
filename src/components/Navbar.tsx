@@ -12,10 +12,8 @@ import {
   Menu,
   X,
   TrendingUp,
-  History,
   ShoppingBag,
-  Coins,
-  Crown
+  Coins
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -76,17 +74,9 @@ export default function Navbar() {
                   <Trophy className="w-4 h-4" />
                   Rangliste
                 </Link>
-                <Link href="/history" className="nav-link flex items-center gap-2">
-                  <History className="w-4 h-4" />
-                  Verlauf
-                </Link>
                 <Link href="/live" className="nav-link flex items-center gap-2">
                   <TrendingUp className="w-4 h-4" />
                   WM
-                </Link>
-                <Link href="/season-tips" className="nav-link flex items-center gap-2 text-orange-400 hover:text-orange-300">
-                  <Crown className="w-4 h-4" />
-                  Saison
                 </Link>
                 <Link href="/shop" className="nav-link flex items-center gap-2 text-yellow-400 hover:text-yellow-300">
                   <ShoppingBag className="w-4 h-4" />
@@ -166,28 +156,12 @@ export default function Navbar() {
                   Rangliste
                 </Link>
                 <Link 
-                  href="/history" 
-                  className="flex items-center gap-3 py-2 text-gray-300 hover:text-white"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <History className="w-5 h-5" />
-                  Verlauf
-                </Link>
-                <Link 
                   href="/live" 
                   className="flex items-center gap-3 py-2 text-gray-300 hover:text-white"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   <TrendingUp className="w-5 h-5" />
                   WM
-                </Link>
-                <Link 
-                  href="/season-tips" 
-                  className="flex items-center gap-3 py-2 text-orange-400 hover:text-orange-300"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <Crown className="w-5 h-5" />
-                  Saison-Tipps
                 </Link>
                 <Link 
                   href="/shop" 
