@@ -6,6 +6,7 @@ import Navbar from '@/components/Navbar'
 import { supabase } from '@/lib/supabase'
 import { SHOP_ITEMS, RARITY_COLORS, CATEGORY_LABELS } from '@/lib/shopItems'
 import { ShoppingBag, Coins, Check, Loader2, Lock } from 'lucide-react'
+import ShopItemIcon from '@/components/ShopItemIcon'
 
 type Category = 'all' | 'helmet' | 'car' | 'trophy' | 'badge' | 'special'
 
@@ -204,7 +205,9 @@ export default function ShopPage() {
                 {/* Content */}
                 <div className="p-4">
                   {/* Icon */}
-                  <div className="text-5xl text-center mb-3">{item.image_url}</div>
+                  <div className="flex justify-center mb-3">
+                    <ShopItemIcon itemId={item.id} category={item.category} size="md" />
+                  </div>
                   
                   {/* Name */}
                   <h3 className="font-bold text-white text-center mb-1 text-sm leading-tight">

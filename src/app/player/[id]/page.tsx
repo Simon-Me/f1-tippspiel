@@ -15,6 +15,7 @@ import {
   Coins
 } from 'lucide-react'
 import Avatar from '@/components/Avatar'
+import ShopItemIcon from '@/components/ShopItemIcon'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 
@@ -210,11 +211,11 @@ export default function PlayerProfilePage() {
                         return (
                           <div 
                             key={item.id}
-                            className={`relative p-3 rounded-xl border-2 ${rarityStyle.border} bg-black/50`}
+                            className={`relative p-3 rounded-xl border-2 ${rarityStyle.border} bg-black/50 flex flex-col items-center`}
                             title={`${item.name} - ${item.description}`}
                           >
-                            <div className="text-3xl mb-1">{item.image_url}</div>
-                            <div className="text-xs font-medium text-white truncate max-w-[80px]">{item.name}</div>
+                            <ShopItemIcon itemId={item.id} category={item.category} size="sm" />
+                            <div className="text-xs font-medium text-white truncate max-w-[80px] mt-1">{item.name}</div>
                             <div className={`text-[10px] ${rarityStyle.text} uppercase`}>{item.rarity}</div>
                           </div>
                         )
