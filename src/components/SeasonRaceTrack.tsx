@@ -3,12 +3,16 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { CAR_ITEMS } from '@/lib/shopItems'
-import { Trophy } from 'lucide-react'
+import { Trophy, X, Medal, Car } from 'lucide-react'
+import Avatar from './Avatar'
 
 interface PlayerWithCar {
   id: string
   username: string
   total_points: number
+  avatar_url?: string
+  equippedCarId?: string
+  equippedCarName?: string
   equippedCarImage?: string
 }
 
@@ -23,6 +27,7 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
   const [players, setPlayers] = useState<PlayerWithCar[]>([])
   const [maxPoints, setMaxPoints] = useState(100)
   const [loading, setLoading] = useState(true)
+  const [selectedPlayer, setSelectedPlayer] = useState<PlayerWithCar | null>(null)
 
   useEffect(() => {
     async function loadData() {
@@ -42,12 +47,11 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
         .select('user_id, item_id, equipped')
         .eq('equipped', true)
 
-      const userCarMap: Record<string, string> = {}
+      const userCarMap: Record<string, { id: string, name: string, image: string }> = {}
       userItems?.forEach(item => {
         const car = CAR_ITEMS.find(c => c.id === item.item_id)
         if (car) {
-          // Später: TopView Bilder pro Auto
-          userCarMap[item.user_id] = car.image
+          userCarMap[item.user_id] = { id: car.id, name: car.name, image: car.image }
         }
       })
 
@@ -58,7 +62,10 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
         id: p.id,
         username: p.username,
         total_points: p.total_points || 0,
-        equippedCarImage: userCarMap[p.id]
+        avatar_url: p.avatar_url,
+        equippedCarId: userCarMap[p.id]?.id,
+        equippedCarName: userCarMap[p.id]?.name,
+        equippedCarImage: userCarMap[p.id]?.image
       }))
 
       setPlayers(playersWithCars)
@@ -111,8 +118,11 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
               className="relative flex items-center h-16 mb-2 group"
               style={{ paddingLeft: `${position}%` }}
             >
-              {/* Auto + Tooltip */}
-              <div className={`relative flex items-center transition-all ${isMe ? 'scale-110 z-10' : ''} group-hover:z-20`}>
+              {/* Auto + Tooltip - Klickbar */}
+              <div 
+                className={`relative flex items-center transition-all cursor-pointer ${isMe ? 'scale-110 z-10' : ''} group-hover:z-20 group-hover:scale-105`}
+                onClick={() => setSelectedPlayer(player)}
+              >
                 <img 
                   src={DEFAULT_CAR_TOP}
                   alt=""
@@ -131,7 +141,6 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
                     {player.username}
                   </span>
                   <span className="text-yellow-400 ml-2">{player.total_points} Pkt</span>
-                  {/* Pfeil nach unten */}
                   <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-800/95" />
                 </div>
               </div>
@@ -148,6 +157,94 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
         <span>{Math.round(maxPoints*3/4)}</span>
         <span>{maxPoints}</span>
       </div>
+
+      {/* Spieler Detail Overlay */}
+      {selectedPlayer && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedPlayer(null)}
+        >
+          <div 
+            className="bg-zinc-900 rounded-3xl border border-zinc-700 max-w-md w-full overflow-hidden shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header mit Schließen */}
+            <div className="relative p-6 pb-4 border-b border-zinc-800">
+              <button 
+                onClick={() => setSelectedPlayer(null)}
+                className="absolute top-4 right-4 p-2 rounded-full hover:bg-zinc-800 transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+              
+              {/* Profil */}
+              <div className="flex items-center gap-4">
+                <Avatar url={selectedPlayer.avatar_url} username={selectedPlayer.username} size="xl" />
+                <div>
+                  <h3 className="text-2xl font-bold text-white">{selectedPlayer.username}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Medal className="w-4 h-4 text-yellow-400" />
+                    <span className="text-gray-400">
+                      Rang #{sortedPlayers.findIndex(p => p.id === selectedPlayer.id) + 1}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="p-6 space-y-4">
+              {/* Punkte */}
+              <div className="bg-zinc-800/50 rounded-2xl p-4 flex items-center justify-between">
+                <span className="text-gray-400">Punkte</span>
+                <span className="text-2xl font-bold text-yellow-400">{selectedPlayer.total_points}</span>
+              </div>
+
+              {/* Auto */}
+              <div className="bg-zinc-800/50 rounded-2xl p-4">
+                <div className="flex items-center gap-2 text-gray-400 mb-3">
+                  <Car className="w-4 h-4" />
+                  <span>Fahrzeug</span>
+                </div>
+                {selectedPlayer.equippedCarImage ? (
+                  <div className="flex items-center gap-4">
+                    <img 
+                      src={selectedPlayer.equippedCarImage} 
+                      alt={selectedPlayer.equippedCarName}
+                      className="h-20 w-auto object-contain rounded-lg"
+                    />
+                    <span className="font-semibold text-white">{selectedPlayer.equippedCarName}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-4">
+                    <img 
+                      src={DEFAULT_CAR_TOP}
+                      alt="Standard"
+                      className="h-16 w-auto object-contain"
+                      style={{ transform: 'rotate(180deg)' }}
+                    />
+                    <span className="text-gray-500 italic">Kein Auto ausgewählt</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Fortschritt */}
+              <div className="bg-zinc-800/50 rounded-2xl p-4">
+                <div className="flex items-center justify-between text-sm mb-2">
+                  <span className="text-gray-400">WM-Fortschritt</span>
+                  <span className="text-white">{Math.round((selectedPlayer.total_points / maxPoints) * 100)}%</span>
+                </div>
+                <div className="h-3 bg-zinc-700 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-green-500 to-yellow-500 rounded-full transition-all"
+                    style={{ width: `${Math.min((selectedPlayer.total_points / maxPoints) * 100, 100)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
