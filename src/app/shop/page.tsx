@@ -1,13 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import Navbar from '@/components/Navbar'
 import { supabase } from '@/lib/supabase'
 import { CAR_ITEMS, RARITY_COLORS, RARITY_LABELS, CarItem } from '@/lib/shopItems'
-import { Coins, Check, Loader2, Lock, Sparkles } from 'lucide-react'
-
-type Rarity = 'all' | 'legendary' | 'epic' | 'rare' | 'common'
+import { Coins, Check, Loader2, Lock, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
 
 export default function ShopPage() {
   const { user, refreshProfile } = useAuth()
@@ -15,9 +13,12 @@ export default function ShopPage() {
   const [ownedCars, setOwnedCars] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [buying, setBuying] = useState<string | null>(null)
-  const [filter, setFilter] = useState<Rarity>('all')
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [isAnimating, setIsAnimating] = useState(false)
+  const [direction, setDirection] = useState<'left' | 'right' | null>(null)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
-  const [selectedCar, setSelectedCar] = useState<CarItem | null>(null)
+
+  const currentCar = CAR_ITEMS[currentIndex]
 
   useEffect(() => {
     if (!user) return
@@ -46,38 +47,64 @@ export default function ShopPage() {
     loadData()
   }, [user])
 
-  const buyCar = async (car: CarItem) => {
-    if (!user) return
+  const navigate = useCallback((dir: 'left' | 'right') => {
+    if (isAnimating) return
+    
+    setDirection(dir)
+    setIsAnimating(true)
+    
+    setTimeout(() => {
+      if (dir === 'right') {
+        setCurrentIndex((prev) => (prev + 1) % CAR_ITEMS.length)
+      } else {
+        setCurrentIndex((prev) => (prev - 1 + CAR_ITEMS.length) % CAR_ITEMS.length)
+      }
+      setDirection(null)
+      setIsAnimating(false)
+    }, 300)
+  }, [isAnimating])
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') navigate('left')
+      if (e.key === 'ArrowRight') navigate('right')
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [navigate])
+
+  const buyCar = async () => {
+    if (!user || !currentCar) return
     
     const userId = user.id
     
-    if (coins < car.price) {
+    if (coins < currentCar.price) {
       setMessage({ type: 'error', text: 'Nicht genug Coins!' })
       setTimeout(() => setMessage(null), 3000)
       return
     }
-    if (ownedCars.includes(car.id)) return
+    if (ownedCars.includes(currentCar.id)) return
 
-    setBuying(car.id)
+    setBuying(currentCar.id)
 
     try {
       await supabase
         .from('profiles')
-        .update({ coins: coins - car.price })
+        .update({ coins: coins - currentCar.price })
         .eq('id', userId)
 
       await supabase
         .from('user_items')
         .insert({
           user_id: userId,
-          item_id: car.id,
+          item_id: currentCar.id,
           equipped: false
         })
 
-      setCoins(coins - car.price)
-      setOwnedCars([...ownedCars, car.id])
-      setMessage({ type: 'success', text: `${car.name} gekauft! 🏎️` })
-      setSelectedCar(null)
+      setCoins(coins - currentCar.price)
+      setOwnedCars([...ownedCars, currentCar.id])
+      setMessage({ type: 'success', text: `${currentCar.name} gekauft! 🏎️` })
       await refreshProfile()
       setTimeout(() => setMessage(null), 3000)
     } catch (error) {
@@ -88,10 +115,6 @@ export default function ShopPage() {
       setBuying(null)
     }
   }
-
-  const filteredCars = filter === 'all' 
-    ? CAR_ITEMS 
-    : CAR_ITEMS.filter(car => car.rarity === filter)
 
   if (!user) {
     return (
@@ -114,101 +137,35 @@ export default function ShopPage() {
     )
   }
 
+  const owned = ownedCars.includes(currentCar.id)
+  const canAfford = coins >= currentCar.price
+  const rarity = RARITY_COLORS[currentCar.rarity]
+
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-gradient-to-b from-black via-zinc-950 to-black text-white overflow-hidden">
       <Navbar />
       
-      {/* Car Detail Modal */}
-      {selectedCar && (
-        <div 
-          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
-          onClick={() => setSelectedCar(null)}
-        >
-          <div 
-            className={`bg-zinc-900 rounded-3xl max-w-2xl w-full overflow-hidden border-2 ${RARITY_COLORS[selectedCar.rarity].border}`}
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Image */}
-            <div className="relative aspect-video bg-gradient-to-b from-zinc-800 to-zinc-900">
-              <img 
-                src={selectedCar.image} 
-                alt={selectedCar.name}
-                className="w-full h-full object-contain"
-              />
-              <div className={`absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold uppercase ${RARITY_COLORS[selectedCar.rarity].bg} ${RARITY_COLORS[selectedCar.rarity].text}`}>
-                {RARITY_LABELS[selectedCar.rarity]}
-              </div>
-              {ownedCars.includes(selectedCar.id) && (
-                <div className="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold bg-green-600 text-white flex items-center gap-1">
-                  <Check className="w-3 h-3" /> In deiner Garage
-                </div>
-              )}
-            </div>
-            
-            {/* Info */}
-            <div className="p-6">
-              <h2 className="text-3xl font-bold mb-2">{selectedCar.name}</h2>
-              <p className="text-gray-400 text-lg mb-6">{selectedCar.description}</p>
-              
-              {ownedCars.includes(selectedCar.id) ? (
-                <button 
-                  className="w-full py-4 rounded-2xl bg-green-900/50 text-green-400 font-bold text-lg flex items-center justify-center gap-2"
-                  disabled
-                >
-                  <Check className="w-5 h-5" /> Bereits gekauft
-                </button>
-              ) : (
-                <button
-                  onClick={() => buyCar(selectedCar)}
-                  disabled={coins < selectedCar.price || buying === selectedCar.id}
-                  className={`w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition ${
-                    coins >= selectedCar.price 
-                      ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-black hover:from-yellow-400 hover:to-yellow-500' 
-                      : 'bg-zinc-700 text-gray-500 cursor-not-allowed'
-                  }`}
-                >
-                  {buying === selectedCar.id ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      <Coins className="w-5 h-5" />
-                      {selectedCar.price.toLocaleString()} Coins
-                      {coins < selectedCar.price && (
-                        <span className="text-sm opacity-70">(dir fehlen {(selectedCar.price - coins).toLocaleString()})</span>
-                      )}
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-      
-      <main className="pt-24 pb-16 px-6 max-w-6xl mx-auto">
+      <main className="pt-20 pb-8 px-4 min-h-screen flex flex-col">
         {/* Header */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8">
+        <div className="flex items-center justify-between mb-4 max-w-6xl mx-auto w-full">
           <div>
-            <p className="text-gray-500 text-sm uppercase tracking-wider mb-1">Deine Sammlung</p>
-            <h1 className="text-5xl font-bold flex items-center gap-4">
-              <span className="text-4xl">🏎️</span>
-              Garage
+            <h1 className="text-3xl font-bold flex items-center gap-3">
+              🏎️ Garage
             </h1>
-            <p className="text-gray-500 mt-2">{ownedCars.length} von {CAR_ITEMS.length} Autos</p>
+            <p className="text-gray-500 text-sm">{ownedCars.length}/{CAR_ITEMS.length} Autos</p>
           </div>
           
-          <div className="bg-gradient-to-br from-yellow-900/50 to-yellow-700/30 px-8 py-4 rounded-2xl border border-yellow-600/30">
-            <div className="flex items-center gap-3">
-              <Coins className="w-8 h-8 text-yellow-400" />
-              <span className="text-4xl font-bold text-yellow-400">{coins.toLocaleString()}</span>
+          <div className="bg-gradient-to-br from-yellow-900/50 to-yellow-700/30 px-6 py-3 rounded-2xl border border-yellow-600/30">
+            <div className="flex items-center gap-2">
+              <Coins className="w-6 h-6 text-yellow-400" />
+              <span className="text-2xl font-bold text-yellow-400">{coins.toLocaleString()}</span>
             </div>
-            <p className="text-yellow-600 text-sm mt-1">Verfügbare Coins</p>
           </div>
         </div>
 
         {/* Message */}
         {message && (
-          <div className={`mb-6 p-4 rounded-xl text-center font-medium ${
+          <div className={`mb-4 p-4 rounded-xl text-center font-medium max-w-md mx-auto ${
             message.type === 'success' ? 'bg-green-900/50 text-green-400 border border-green-700' : 
             'bg-red-900/50 text-red-400 border border-red-700'
           }`}>
@@ -216,109 +173,148 @@ export default function ShopPage() {
           </div>
         )}
 
-        {/* Filter */}
-        <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
-          {(['all', 'legendary', 'epic', 'rare', 'common'] as const).map(r => (
-            <button
-              key={r}
-              onClick={() => setFilter(r)}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition flex items-center gap-2 ${
-                filter === r 
-                  ? r === 'legendary' ? 'bg-yellow-500 text-black' :
-                    r === 'epic' ? 'bg-purple-500 text-white' :
-                    r === 'rare' ? 'bg-blue-500 text-white' :
-                    'bg-white text-black'
-                  : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
+        {/* Main Carousel */}
+        <div className="flex-1 flex items-center justify-center relative">
+          {/* Left Arrow */}
+          <button
+            onClick={() => navigate('left')}
+            className="absolute left-4 md:left-8 z-20 w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+          >
+            <ChevronLeft className="w-8 h-8" />
+          </button>
+
+          {/* Car Display */}
+          <div className="flex-1 max-w-4xl mx-auto px-16">
+            {/* Rarity Badge */}
+            <div className="flex justify-center mb-4">
+              <div className={`px-4 py-1.5 rounded-full text-sm font-bold uppercase flex items-center gap-2 ${rarity.bg} ${rarity.text}`}>
+                {currentCar.rarity === 'legendary' && <Sparkles className="w-4 h-4" />}
+                {RARITY_LABELS[currentCar.rarity]}
+              </div>
+            </div>
+
+            {/* Car Image */}
+            <div 
+              className={`relative transition-all duration-300 ease-out ${
+                direction === 'left' ? 'translate-x-12 opacity-0' :
+                direction === 'right' ? '-translate-x-12 opacity-0' :
+                'translate-x-0 opacity-100'
               }`}
             >
-              {r === 'legendary' && <Sparkles className="w-4 h-4" />}
-              {r === 'all' ? 'Alle' : RARITY_LABELS[r]}
-              <span className="opacity-70">({r === 'all' ? CAR_ITEMS.length : CAR_ITEMS.filter(c => c.rarity === r).length})</span>
-            </button>
-          ))}
+              <div className={`relative rounded-3xl overflow-hidden border-2 ${rarity.border} ${rarity.glow ? `shadow-2xl ${rarity.glow}` : ''}`}>
+                {/* Glow Effect */}
+                {currentCar.rarity === 'legendary' && (
+                  <div className="absolute inset-0 bg-gradient-to-t from-yellow-500/20 via-transparent to-transparent animate-pulse" />
+                )}
+                {currentCar.rarity === 'epic' && (
+                  <div className="absolute inset-0 bg-gradient-to-t from-purple-500/20 via-transparent to-transparent" />
+                )}
+                
+                <img 
+                  src={currentCar.image} 
+                  alt={currentCar.name}
+                  className="w-full aspect-video object-contain bg-gradient-to-b from-zinc-800 to-zinc-950"
+                />
+                
+                {/* Owned Badge */}
+                {owned && (
+                  <div className="absolute top-4 right-4 px-4 py-2 rounded-full bg-green-500 text-white font-bold flex items-center gap-2 shadow-lg">
+                    <Check className="w-5 h-5" /> IN DEINER GARAGE
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Car Info */}
+            <div className="text-center mt-6">
+              <h2 className="text-4xl font-bold mb-2">{currentCar.name}</h2>
+              <p className="text-gray-400 text-lg mb-6 max-w-md mx-auto">{currentCar.description}</p>
+              
+              {/* Buy Button */}
+              {owned ? (
+                <button 
+                  className="px-12 py-4 rounded-2xl bg-green-900/50 text-green-400 font-bold text-xl flex items-center justify-center gap-3 mx-auto cursor-default"
+                  disabled
+                >
+                  <Check className="w-6 h-6" /> Bereits in deiner Garage
+                </button>
+              ) : (
+                <button
+                  onClick={buyCar}
+                  disabled={!canAfford || buying === currentCar.id}
+                  className={`px-12 py-4 rounded-2xl font-bold text-xl flex items-center justify-center gap-3 mx-auto transition-all ${
+                    canAfford 
+                      ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-black hover:from-yellow-400 hover:to-yellow-500 hover:scale-105 active:scale-95 shadow-lg shadow-yellow-500/30' 
+                      : 'bg-zinc-800 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  {buying === currentCar.id ? (
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                  ) : (
+                    <>
+                      <Coins className="w-6 h-6" />
+                      {currentCar.price.toLocaleString()} Coins
+                    </>
+                  )}
+                </button>
+              )}
+              
+              {!canAfford && !owned && (
+                <p className="text-red-400 mt-3 text-sm">
+                  Dir fehlen noch {(currentCar.price - coins).toLocaleString()} Coins
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Right Arrow */}
+          <button
+            onClick={() => navigate('right')}
+            className="absolute right-4 md:right-8 z-20 w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+          >
+            <ChevronRight className="w-8 h-8" />
+          </button>
         </div>
 
-        {/* Cars Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCars.map(car => {
-            const owned = ownedCars.includes(car.id)
-            const canAfford = coins >= car.price
-            const rarity = RARITY_COLORS[car.rarity]
-            
+        {/* Dots / Progress */}
+        <div className="flex justify-center gap-2 mt-6">
+          {CAR_ITEMS.map((car, idx) => {
+            const isOwned = ownedCars.includes(car.id)
+            const isCurrent = idx === currentIndex
             return (
-              <div 
+              <button
                 key={car.id}
-                onClick={() => setSelectedCar(car)}
-                className={`group relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02] ${
-                  owned ? 'ring-2 ring-green-500/50' : ''
-                } ${rarity.glow ? `shadow-lg ${rarity.glow}` : ''}`}
-              >
-                {/* Image Container */}
-                <div className={`relative aspect-[4/3] bg-gradient-to-b from-zinc-800 to-zinc-900 border-2 ${rarity.border} rounded-2xl overflow-hidden`}>
-                  <img 
-                    src={car.image} 
-                    alt={car.name}
-                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
-                  />
-                  
-                  {/* Rarity Badge */}
-                  <div className={`absolute top-3 left-3 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${rarity.bg} ${rarity.text}`}>
-                    {RARITY_LABELS[car.rarity]}
-                  </div>
-                  
-                  {/* Owned Badge */}
-                  {owned && (
-                    <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
-                      <Check className="w-5 h-5 text-white" />
-                    </div>
-                  )}
-                  
-                  {/* Gradient Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                  
-                  {/* Info Overlay */}
-                  <div className="absolute bottom-0 left-0 right-0 p-4">
-                    <h3 className="text-xl font-bold text-white mb-1">{car.name}</h3>
-                    <p className="text-gray-400 text-sm line-clamp-1 mb-3">{car.description}</p>
-                    
-                    {owned ? (
-                      <div className="flex items-center gap-2 text-green-400 text-sm font-medium">
-                        <Check className="w-4 h-4" /> In deiner Garage
-                      </div>
-                    ) : (
-                      <div className={`flex items-center gap-2 text-lg font-bold ${canAfford ? 'text-yellow-400' : 'text-gray-500'}`}>
-                        <Coins className="w-5 h-5" />
-                        {car.price.toLocaleString()}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+                onClick={() => {
+                  if (!isAnimating) {
+                    setDirection(idx > currentIndex ? 'right' : 'left')
+                    setIsAnimating(true)
+                    setTimeout(() => {
+                      setCurrentIndex(idx)
+                      setDirection(null)
+                      setIsAnimating(false)
+                    }, 300)
+                  }
+                }}
+                className={`h-2 rounded-full transition-all ${
+                  isCurrent 
+                    ? 'w-8 bg-white' 
+                    : isOwned 
+                      ? 'w-2 bg-green-500 hover:bg-green-400' 
+                      : 'w-2 bg-zinc-600 hover:bg-zinc-500'
+                }`}
+                title={car.name}
+              />
             )
           })}
         </div>
 
-        {/* Info */}
-        <div className="mt-12 p-6 bg-zinc-900 rounded-2xl border border-zinc-800">
-          <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
-            <Coins className="w-5 h-5 text-yellow-400" />
-            Wie bekomme ich Coins?
-          </h3>
-          <div className="grid md:grid-cols-2 gap-4 text-gray-400 text-sm">
-            <div>
-              <p className="text-white font-medium mb-1">🎁 Startguthaben</p>
-              <p>Jeder bekommt 500 Coins zum Start!</p>
-            </div>
-            <div>
-              <p className="text-white font-medium mb-1">🎯 Punkte sammeln</p>
-              <p>10 Punkte = 100 Coins</p>
-            </div>
-          </div>
-          <div className="mt-4 pt-4 border-t border-zinc-800 flex flex-wrap gap-3 text-xs">
-            <span className="px-3 py-1 bg-zinc-800 rounded-full">Race P1 = +250 Coins</span>
-            <span className="px-3 py-1 bg-zinc-800 rounded-full">Perfektes Podium = +780 Coins</span>
-            <span className="px-3 py-1 bg-zinc-800 rounded-full">Quali Pole = +100 Coins</span>
-          </div>
+        {/* Quick Stats */}
+        <div className="flex justify-center gap-6 mt-6 text-sm text-gray-500">
+          <span>← → Pfeiltasten zum Navigieren</span>
+          <span>•</span>
+          <span className="text-green-400">{ownedCars.length} gekauft</span>
+          <span>•</span>
+          <span>{CAR_ITEMS.length - ownedCars.length} übrig</span>
         </div>
       </main>
     </div>

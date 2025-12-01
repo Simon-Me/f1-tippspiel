@@ -19,7 +19,7 @@ export const CAR_ITEMS: CarItem[] = [
     description: 'Der ultimative Flex. Pures Gold auf der Strecke.',
     price: 5000,
     rarity: 'legendary',
-    image: '/cars/gold.png'
+    image: '/cars/gold.webp'
   },
   {
     id: 'redbull',
@@ -27,7 +27,7 @@ export const CAR_ITEMS: CarItem[] = [
     description: 'Das dominante Auto des 4x Weltmeisters.',
     price: 4000,
     rarity: 'legendary',
-    image: '/cars/redbull.png'
+    image: '/cars/redbull.webp'
   },
   {
     id: 'ferrari',
@@ -35,7 +35,7 @@ export const CAR_ITEMS: CarItem[] = [
     description: 'La Rossa - Die rote Göttin aus Maranello.',
     price: 3500,
     rarity: 'legendary',
-    image: '/cars/ferrari.png'
+    image: '/cars/ferrari.webp'
   },
   
   // === EPIC (1500-2500 Coins) - Für gute Tipper ===
@@ -45,7 +45,7 @@ export const CAR_ITEMS: CarItem[] = [
     description: 'Der Silberpfeil. 8x Konstrukteurs-Weltmeister.',
     price: 2500,
     rarity: 'epic',
-    image: '/cars/mercedes.png'
+    image: '/cars/mercedes.webp'
   },
   {
     id: 'audi',
@@ -53,7 +53,7 @@ export const CAR_ITEMS: CarItem[] = [
     description: 'Die Zukunft. Ab 2026 in der Formel 1.',
     price: 2000,
     rarity: 'epic',
-    image: '/cars/audi.png'
+    image: '/cars/audi.webp'
   },
   {
     id: 'moncler',
@@ -61,7 +61,7 @@ export const CAR_ITEMS: CarItem[] = [
     description: 'Luxus auf der Strecke. Für die Stylischen.',
     price: 1800,
     rarity: 'epic',
-    image: '/cars/moncler.png'
+    image: '/cars/moncler.webp'
   },
   {
     id: 'nike',
@@ -69,7 +69,7 @@ export const CAR_ITEMS: CarItem[] = [
     description: 'Just Do It. Auf 350 km/h.',
     price: 1500,
     rarity: 'epic',
-    image: '/cars/nike.png'
+    image: '/cars/nike.webp'
   },
   
   // === RARE (600-1200 Coins) - Mit etwas Tippen erreichbar ===
@@ -79,7 +79,7 @@ export const CAR_ITEMS: CarItem[] = [
     description: 'Die Legende kehrt zurück. 9x Weltmeister-Team.',
     price: 1200,
     rarity: 'rare',
-    image: '/cars/williams.png'
+    image: '/cars/williams.webp'
   },
   {
     id: 'haas',
@@ -87,7 +87,7 @@ export const CAR_ITEMS: CarItem[] = [
     description: 'Das amerikanische Team. Made in USA.',
     price: 1000,
     rarity: 'rare',
-    image: '/cars/haas.png'
+    image: '/cars/haas.webp'
   },
   {
     id: 'cocacola',
@@ -95,7 +95,7 @@ export const CAR_ITEMS: CarItem[] = [
     description: 'Erfrischend schnell. Taste the Speed.',
     price: 900,
     rarity: 'rare',
-    image: '/cars/cocacola.png'
+    image: '/cars/cocacola.webp'
   },
   {
     id: 'mcdonalds',
@@ -103,7 +103,7 @@ export const CAR_ITEMS: CarItem[] = [
     description: "I'm lovin' it. Mit Extra Speed.",
     price: 800,
     rarity: 'rare',
-    image: '/cars/mcdonalds.png'
+    image: '/cars/mcdonalds.webp'
   },
   {
     id: 'clubmate',
@@ -111,7 +111,7 @@ export const CAR_ITEMS: CarItem[] = [
     description: 'Koffein-Power für die Nachtrennen.',
     price: 700,
     rarity: 'rare',
-    image: '/cars/clubmate.png'
+    image: '/cars/clubmate.webp'
   },
   {
     id: 'jokoklaas',
@@ -119,7 +119,7 @@ export const CAR_ITEMS: CarItem[] = [
     description: 'Florida TV Special. Chaos auf der Strecke.',
     price: 600,
     rarity: 'rare',
-    image: '/cars/jokoklaas.png'
+    image: '/cars/jokoklaas.webp'
   },
   
   // === COMMON (100-500 Coins) - Direkt kaufbar mit Startguthaben ===
@@ -129,7 +129,7 @@ export const CAR_ITEMS: CarItem[] = [
     description: 'We love to entertain you. Auf der Rennstrecke.',
     price: 500,
     rarity: 'common',
-    image: '/cars/prosieben.png'
+    image: '/cars/prosieben.webp'
   },
   {
     id: 'funnyfrisch',
@@ -137,7 +137,7 @@ export const CAR_ITEMS: CarItem[] = [
     description: 'Ungarisch scharf. Auch auf der Strecke.',
     price: 400,
     rarity: 'common',
-    image: '/cars/funnyfrisch.png'
+    image: '/cars/funnyfrisch.webp'
   },
   {
     id: 'fiat',
@@ -145,7 +145,7 @@ export const CAR_ITEMS: CarItem[] = [
     description: 'Italienische Eleganz trifft Formel 1.',
     price: 350,
     rarity: 'common',
-    image: '/cars/fiat.png'
+    image: '/cars/fiat.webp'
   },
   {
     id: 'jeep',
@@ -153,7 +153,7 @@ export const CAR_ITEMS: CarItem[] = [
     description: 'Für die härtesten Strecken. Oder so.',
     price: 300,
     rarity: 'common',
-    image: '/cars/jeep.png'
+    image: '/cars/jeep.webp'
   },
   {
     id: 'opelcorsa',
@@ -161,7 +161,7 @@ export const CAR_ITEMS: CarItem[] = [
     description: 'Deutschlands Liebling. Jetzt in schnell.',
     price: 250,
     rarity: 'common',
-    image: '/cars/opelcorsa.png'
+    image: '/cars/opelcorsa.webp'
   },
   {
     id: 'lasagne',
@@ -169,7 +169,7 @@ export const CAR_ITEMS: CarItem[] = [
     description: 'Al dente auf der Strecke. Mama mia!',
     price: 200,
     rarity: 'common',
-    image: '/cars/lasagne.png'
+    image: '/cars/lasagne.webp'
   },
   {
     id: 'bratwurst',
@@ -177,7 +177,7 @@ export const CAR_ITEMS: CarItem[] = [
     description: 'Mit Senf. Deutschlands schnellste Wurst.',
     price: 150,
     rarity: 'common',
-    image: '/cars/bratwurst.png'
+    image: '/cars/bratwurst.webp'
   },
   {
     id: 'multipla',
@@ -185,7 +185,7 @@ export const CAR_ITEMS: CarItem[] = [
     description: 'Das hässlichste Auto. Jetzt in schnell und hässlich.',
     price: 100,
     rarity: 'common',
-    image: '/cars/multipla.png'
+    image: '/cars/multipla.webp'
   }
 ]
 
