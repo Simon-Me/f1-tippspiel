@@ -20,8 +20,8 @@ interface SeasonRaceTrackProps {
   currentUserId?: string
 }
 
-// Standard TopView - Opel Corsa
-const DEFAULT_CAR_TOP = '/cars/top/opelcorsa.png'
+// Standard TopView - Default Car
+const DEFAULT_CAR_TOP = '/cars/top/default.png'
 
 // Verfügbare Top-View Bilder (alle Shop-Autos)
 const AVAILABLE_TOP_VIEWS = [
@@ -193,7 +193,7 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
                 </div>
                 <div className="flex flex-col items-center gap-2">
                   <img 
-                    src={selectedPlayer.equippedCarImage || '/cars/opelcorsa.webp'} 
+                    src={selectedPlayer.equippedCarImage || '/cars/default.png'} 
                     alt={selectedPlayer.equippedCarName || 'Standard'}
                     className="h-24 md:h-32 w-auto object-contain"
                   />
