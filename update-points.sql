@@ -35,3 +35,4 @@ ORDER BY total_points DESC;
 
 
 
+

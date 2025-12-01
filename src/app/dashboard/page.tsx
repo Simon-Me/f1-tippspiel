@@ -10,6 +10,7 @@ import { getCountryFlag } from '@/lib/images'
 import { Trophy, ChevronRight, Clock, CheckCircle2, Loader2, AlertCircle, Coins } from 'lucide-react'
 import Avatar from '@/components/Avatar'
 import SeasonRaceTrack from '@/components/SeasonRaceTrack'
+import OnboardingModal from '@/components/OnboardingModal'
 import { differenceInHours, differenceInMinutes, format } from 'date-fns'
 import { de } from 'date-fns/locale'
 
@@ -27,10 +28,20 @@ export default function DashboardPage() {
   
   // Status für Punkte-Berechnung
   const [calcStatus, setCalcStatus] = useState<'idle' | 'checking' | 'calculating' | 'done'>('idle')
+  
+  // Onboarding
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) router.push('/login')
   }, [user, loading, router])
+
+  // Onboarding Check
+  useEffect(() => {
+    if (profile && !profile.onboarding_completed) {
+      setShowOnboarding(true)
+    }
+  }, [profile])
 
   // Daten laden
   const fetchData = useCallback(async () => {
@@ -363,6 +374,18 @@ export default function DashboardPage() {
           </div>
         </div>
       </main>
+
+      {/* Onboarding Modal */}
+      {showOnboarding && user && profile && (
+        <OnboardingModal 
+          userId={user.id} 
+          username={profile.username}
+          onComplete={() => {
+            setShowOnboarding(false)
+            refreshProfile()
+          }}
+        />
+      )}
     </div>
   )
 }

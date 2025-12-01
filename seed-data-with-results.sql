@@ -118,3 +118,4 @@ ORDER BY p.total_points DESC, p.predictions_count DESC;
 
 
 
+

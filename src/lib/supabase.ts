@@ -14,6 +14,8 @@ export interface Profile {
   coins: number
   predictions_count?: number
   created_at: string
+  onboarding_completed?: boolean
+  equipped_car_id?: string
 }
 
 export interface ShopItem {

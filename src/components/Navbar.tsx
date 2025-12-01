@@ -14,7 +14,8 @@ import {
   TrendingUp,
   History,
   ShoppingBag,
-  Coins
+  Coins,
+  Crown
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -82,6 +83,10 @@ export default function Navbar() {
                 <Link href="/live" className="nav-link flex items-center gap-2">
                   <TrendingUp className="w-4 h-4" />
                   WM
+                </Link>
+                <Link href="/season-tips" className="nav-link flex items-center gap-2 text-orange-400 hover:text-orange-300">
+                  <Crown className="w-4 h-4" />
+                  Saison
                 </Link>
                 <Link href="/shop" className="nav-link flex items-center gap-2 text-yellow-400 hover:text-yellow-300">
                   <ShoppingBag className="w-4 h-4" />
@@ -175,6 +180,14 @@ export default function Navbar() {
                 >
                   <TrendingUp className="w-5 h-5" />
                   WM
+                </Link>
+                <Link 
+                  href="/season-tips" 
+                  className="flex items-center gap-3 py-2 text-orange-400 hover:text-orange-300"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Crown className="w-5 h-5" />
+                  Saison-Tipps
                 </Link>
                 <Link 
                   href="/shop" 
