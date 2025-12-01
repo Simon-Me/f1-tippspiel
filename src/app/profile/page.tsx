@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import Navbar from '@/components/Navbar'
-import { supabase, Prediction, Race, Driver, Profile } from '@/lib/supabase'
+import { supabase, Prediction, Race, Driver } from '@/lib/supabase'
 import { 
   User, 
   Trophy, 
@@ -25,9 +25,7 @@ import {
   Camera,
   Loader2
 } from 'lucide-react'
-import { SHOP_ITEMS, RARITY_COLORS, CATEGORY_LABELS } from '@/lib/shopItems'
-import ShopItemIcon from '@/components/ShopItemIcon'
-import { ShopItem } from '@/lib/supabase'
+import { CAR_ITEMS, RARITY_COLORS, CarItem } from '@/lib/shopItems'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 
@@ -53,7 +51,7 @@ export default function ProfilePage() {
   const [drivers, setDrivers] = useState<Driver[]>([])
   const [allPlayers, setAllPlayers] = useState<Profile[]>([])
   const [coins, setCoins] = useState(0)
-  const [ownedItems, setOwnedItems] = useState<ShopItem[]>([])
+  const [ownedCars, setOwnedCars] = useState<CarItem[]>([])
   const [stats, setStats] = useState({
     totalPredictions: 0,
     totalPoints: 0,
@@ -152,13 +150,9 @@ export default function ProfilePage() {
       if (data.avatar_url) {
         setAvatarUrl(data.avatar_url)
         await refreshProfile()
-        alert(`Profilbild gespeichert! ✅\n\nURL: ${data.avatar_url}`)
-      } else {
-        alert('Kein avatar_url zurückgegeben!\n\n' + JSON.stringify(data))
       }
     } catch (error) {
       console.error('Upload failed:', error)
-      alert(`Upload fehlgeschlagen:\n\n${error instanceof Error ? error.message : 'Unbekannter Fehler'}`)
     } finally {
       setUploading(false)
     }
@@ -191,7 +185,7 @@ export default function ProfilePage() {
         
         if (profileCoins) setCoins(profileCoins.coins || 0)
 
-        // Gekaufte Items laden
+        // Gekaufte Autos laden
         const { data: userItems } = await supabase
           .from('user_items')
           .select('item_id')
@@ -199,9 +193,9 @@ export default function ProfilePage() {
         
         if (userItems) {
           const owned = userItems
-            .map(ui => SHOP_ITEMS.find(item => item.id === ui.item_id))
-            .filter((item): item is ShopItem => item !== undefined)
-          setOwnedItems(owned)
+            .map(ui => CAR_ITEMS.find(item => item.id === ui.item_id))
+            .filter((item): item is CarItem => item !== undefined)
+          setOwnedCars(owned)
         }
 
         // Alle Spieler für Ranking
@@ -574,45 +568,36 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Sammlung */}
+        {/* Meine Garage */}
         <div className="bg-[#111] rounded-xl border border-gray-800 overflow-hidden mb-6">
           <div className="p-4 border-b border-gray-800 flex items-center justify-between">
             <h2 className="font-bold text-white flex items-center gap-2">
-              <ShoppingBag className="w-5 h-5 text-yellow-500" />
-              Meine Sammlung
+              <span className="text-xl">🏎️</span>
+              Meine Garage
             </h2>
             <Link href="/shop" className="text-sm text-yellow-500 hover:underline">
-              Shop →
+              Mehr Autos →
             </Link>
           </div>
 
-          {ownedItems.length > 0 ? (
-            <div className="p-4">
-              {/* Gruppiert nach Kategorie */}
-              {(['helmet', 'car', 'trophy', 'badge', 'special'] as const).map(cat => {
-                const catItems = ownedItems.filter(item => item.category === cat)
-                if (catItems.length === 0) return null
-                
+          {ownedCars.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4">
+              {ownedCars.map(car => {
+                const rarityStyle = RARITY_COLORS[car.rarity]
                 return (
-                  <div key={cat} className="mb-4 last:mb-0">
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">
-                      {CATEGORY_LABELS[cat]} ({catItems.length})
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {catItems.map(item => {
-                        const rarityStyle = RARITY_COLORS[item.rarity]
-                        return (
-                          <div 
-                            key={item.id}
-                            className={`relative p-3 rounded-xl border-2 ${rarityStyle.border} bg-black/50 flex flex-col items-center`}
-                            title={`${item.name} - ${item.description}`}
-                          >
-                            <ShopItemIcon itemId={item.id} category={item.category} size="sm" />
-                            <div className="text-xs font-medium text-white truncate max-w-[80px] mt-1">{item.name}</div>
-                            <div className={`text-[10px] ${rarityStyle.text} uppercase`}>{item.rarity}</div>
-                          </div>
-                        )
-                      })}
+                  <div 
+                    key={car.id}
+                    className={`relative rounded-xl border ${rarityStyle.border} bg-black/50 overflow-hidden`}
+                    title={car.description}
+                  >
+                    <img 
+                      src={car.image} 
+                      alt={car.name}
+                      className="w-full aspect-video object-contain bg-zinc-900"
+                    />
+                    <div className="p-2">
+                      <div className="text-xs font-bold text-white truncate">{car.name}</div>
+                      <div className={`text-[10px] ${rarityStyle.text} uppercase`}>{car.rarity}</div>
                     </div>
                   </div>
                 )
@@ -620,10 +605,10 @@ export default function ProfilePage() {
             </div>
           ) : (
             <div className="p-8 text-center">
-              <ShoppingBag className="w-12 h-12 mx-auto text-gray-600 mb-3" />
-              <p className="text-gray-500">Du hast noch keine Items</p>
+              <span className="text-5xl block mb-3">🏎️</span>
+              <p className="text-gray-500">Du hast noch keine Autos</p>
               <Link href="/shop" className="inline-block mt-4 px-4 py-2 bg-yellow-600 text-black font-bold rounded-lg hover:bg-yellow-500">
-                Zum Shop
+                Zur Garage
               </Link>
             </div>
           )}

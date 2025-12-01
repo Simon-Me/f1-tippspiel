@@ -1,298 +1,207 @@
-import { ShopItem } from './supabase'
+// Shop Items - Nur Autos!
+// Startguthaben: 500 Coins
+// 10 Punkte = 100 Coins
 
-// Startguthaben für neue Spieler
-// Bei 10 Punkte = 100 Coins Umrechnung = 500 Coins Startguthaben
-export const STARTING_COINS = 500
+export interface CarItem {
+  id: string
+  name: string
+  description: string
+  price: number
+  rarity: 'common' | 'rare' | 'epic' | 'legendary'
+  image: string
+}
 
-export const SHOP_ITEMS: ShopItem[] = [
-  // === HELME === (Legendary: 300, Epic: 200, Rare: 120, Common: 50)
+export const CAR_ITEMS: CarItem[] = [
+  // === LEGENDARY (3000-5000 Coins) - Nur für Top-Tipper ===
   {
-    id: 'helmet_verstappen',
-    name: 'Verstappen Helm',
-    description: 'Der ikonische blaue Helm des 4-fachen Weltmeisters',
-    category: 'helmet',
-    price: 300,
+    id: 'gold',
+    name: 'Golden F1',
+    description: 'Der ultimative Flex. Pures Gold auf der Strecke.',
+    price: 5000,
     rarity: 'legendary',
-    image_url: '🪖',
-    team: 'Red Bull Racing',
-    driver: 'Max Verstappen',
-    available: true
+    image: '/cars/gold.png'
   },
   {
-    id: 'helmet_hamilton',
-    name: 'Hamilton Helm',
-    description: 'Der legendäre lila Helm des 7-fachen Weltmeisters',
-    category: 'helmet',
-    price: 300,
-    rarity: 'legendary',
-    image_url: '🪖',
-    team: 'Ferrari',
-    driver: 'Lewis Hamilton',
-    available: true
-  },
-  {
-    id: 'helmet_leclerc',
-    name: 'Leclerc Helm',
-    description: 'Der elegante rote Helm des Ferrari-Stars',
-    category: 'helmet',
-    price: 200,
-    rarity: 'epic',
-    image_url: '🪖',
-    team: 'Ferrari',
-    driver: 'Charles Leclerc',
-    available: true
-  },
-  {
-    id: 'helmet_norris',
-    name: 'Norris Helm',
-    description: 'Der bunte Helm des McLaren-Fahrers',
-    category: 'helmet',
-    price: 200,
-    rarity: 'epic',
-    image_url: '🪖',
-    team: 'McLaren',
-    driver: 'Lando Norris',
-    available: true
-  },
-  {
-    id: 'helmet_alonso',
-    name: 'Alonso Helm',
-    description: 'Der klassische Helm der F1-Legende',
-    category: 'helmet',
-    price: 120,
-    rarity: 'rare',
-    image_url: '🪖',
-    team: 'Aston Martin',
-    driver: 'Fernando Alonso',
-    available: true
-  },
-  {
-    id: 'helmet_generic_red',
-    name: 'Roter Racing Helm',
-    description: 'Ein klassischer roter Rennhelm',
-    category: 'helmet',
-    price: 50,
-    rarity: 'common',
-    image_url: '🪖',
-    available: true
-  },
-  {
-    id: 'helmet_generic_blue',
-    name: 'Blauer Racing Helm',
-    description: 'Ein klassischer blauer Rennhelm',
-    category: 'helmet',
-    price: 50,
-    rarity: 'common',
-    image_url: '🪖',
-    available: true
-  },
-
-  // === AUTOS === (Legendary: 500, Epic: 350, Rare: 200, Common: 80)
-  {
-    id: 'car_redbull_rb20',
+    id: 'redbull',
     name: 'Red Bull RB20',
-    description: 'Das dominante Auto der 2024 Saison',
-    category: 'car',
-    price: 500,
+    description: 'Das dominante Auto des 4x Weltmeisters.',
+    price: 4000,
     rarity: 'legendary',
-    image_url: '🏎️',
-    team: 'Red Bull Racing',
-    available: true
+    image: '/cars/redbull.png'
   },
   {
-    id: 'car_mclaren_mcl38',
-    name: 'McLaren MCL38',
-    description: 'Das schnelle Papaya-Orange Biest',
-    category: 'car',
-    price: 350,
-    rarity: 'epic',
-    image_url: '🏎️',
-    team: 'McLaren',
-    available: true
-  },
-  {
-    id: 'car_ferrari_sf24',
+    id: 'ferrari',
     name: 'Ferrari SF-24',
-    description: 'Die rote Göttin aus Maranello',
-    category: 'car',
-    price: 350,
-    rarity: 'epic',
-    image_url: '🏎️',
-    team: 'Ferrari',
-    available: true
-  },
-  {
-    id: 'car_mercedes_w15',
-    name: 'Mercedes W15',
-    description: 'Der Silberpfeil',
-    category: 'car',
-    price: 200,
-    rarity: 'rare',
-    image_url: '🏎️',
-    team: 'Mercedes',
-    available: true
-  },
-  {
-    id: 'car_aston_amr24',
-    name: 'Aston Martin AMR24',
-    description: 'Das grüne Juwel',
-    category: 'car',
-    price: 200,
-    rarity: 'rare',
-    image_url: '🏎️',
-    team: 'Aston Martin',
-    available: true
-  },
-  {
-    id: 'car_generic_f1',
-    name: 'F1 Bolide',
-    description: 'Ein klassischer Formel 1 Wagen',
-    category: 'car',
-    price: 80,
-    rarity: 'common',
-    image_url: '🏎️',
-    available: true
-  },
-
-  // === TROPHÄEN === (Legendary: 750, Rare: 150, Common: 60)
-  {
-    id: 'trophy_wdc',
-    name: 'WM-Pokal',
-    description: 'Die ultimative Trophäe - der Weltmeister-Pokal',
-    category: 'trophy',
-    price: 750,
+    description: 'La Rossa - Die rote Göttin aus Maranello.',
+    price: 3500,
     rarity: 'legendary',
-    image_url: '🏆',
-    available: true
+    image: '/cars/ferrari.png'
   },
+  
+  // === EPIC (1500-2500 Coins) - Für gute Tipper ===
   {
-    id: 'trophy_race_win',
-    name: 'Rennsieg-Trophäe',
-    description: 'Eine Trophäe für den Rennsieg',
-    category: 'trophy',
-    price: 150,
-    rarity: 'rare',
-    image_url: '🥇',
-    available: true
-  },
-  {
-    id: 'trophy_podium',
-    name: 'Podiums-Trophäe',
-    description: 'Eine Trophäe fürs Podium',
-    category: 'trophy',
-    price: 60,
-    rarity: 'common',
-    image_url: '🥈',
-    available: true
-  },
-
-  // === BADGES === (Epic: 150, Rare: 100)
-  {
-    id: 'badge_monaco',
-    name: 'Monaco Badge',
-    description: 'Die Krone der F1 - Monte Carlo',
-    category: 'badge',
-    price: 150,
+    id: 'mercedes',
+    name: 'Mercedes W15',
+    description: 'Der Silberpfeil. 8x Konstrukteurs-Weltmeister.',
+    price: 2500,
     rarity: 'epic',
-    image_url: '🎰',
-    available: true
+    image: '/cars/mercedes.png'
   },
   {
-    id: 'badge_monza',
-    name: 'Monza Badge',
-    description: 'Der Tempel der Geschwindigkeit',
-    category: 'badge',
-    price: 100,
-    rarity: 'rare',
-    image_url: '🇮🇹',
-    available: true
-  },
-  {
-    id: 'badge_silverstone',
-    name: 'Silverstone Badge',
-    description: 'Die Heimat des Motorsports',
-    category: 'badge',
-    price: 100,
-    rarity: 'rare',
-    image_url: '🇬🇧',
-    available: true
-  },
-  {
-    id: 'badge_spa',
-    name: 'Spa Badge',
-    description: 'Eau Rouge - Die legendäre Strecke',
-    category: 'badge',
-    price: 100,
-    rarity: 'rare',
-    image_url: '🇧🇪',
-    available: true
-  },
-  {
-    id: 'badge_suzuka',
-    name: 'Suzuka Badge',
-    description: 'Die Achterbahn Japans',
-    category: 'badge',
-    price: 100,
-    rarity: 'rare',
-    image_url: '🇯🇵',
-    available: true
-  },
-
-  // === SPECIAL === (Epic: 180, Rare: 80, Common: 40)
-  {
-    id: 'special_drs',
-    name: 'DRS Zone',
-    description: 'Der Überholbooster',
-    category: 'special',
-    price: 80,
-    rarity: 'rare',
-    image_url: '⚡',
-    available: true
-  },
-  {
-    id: 'special_pitcrew',
-    name: 'Pit Crew',
-    description: 'Dein eigenes Boxenteam',
-    category: 'special',
-    price: 180,
+    id: 'audi',
+    name: 'Audi F1',
+    description: 'Die Zukunft. Ab 2026 in der Formel 1.',
+    price: 2000,
     rarity: 'epic',
-    image_url: '🔧',
-    available: true
+    image: '/cars/audi.png'
   },
   {
-    id: 'special_champagne',
-    name: 'Podiums-Champagner',
-    description: 'Feier wie ein Champion',
-    category: 'special',
-    price: 40,
-    rarity: 'common',
-    image_url: '🍾',
-    available: true
+    id: 'moncler',
+    name: 'Moncler Racing',
+    description: 'Luxus auf der Strecke. Für die Stylischen.',
+    price: 1800,
+    rarity: 'epic',
+    image: '/cars/moncler.png'
   },
   {
-    id: 'special_checkered_flag',
-    name: 'Zielflagge',
-    description: 'Das Zeichen des Sieges',
-    category: 'special',
-    price: 30,
+    id: 'nike',
+    name: 'Nike Speed',
+    description: 'Just Do It. Auf 350 km/h.',
+    price: 1500,
+    rarity: 'epic',
+    image: '/cars/nike.png'
+  },
+  
+  // === RARE (600-1200 Coins) - Mit etwas Tippen erreichbar ===
+  {
+    id: 'williams',
+    name: 'Williams FW46',
+    description: 'Die Legende kehrt zurück. 9x Weltmeister-Team.',
+    price: 1200,
+    rarity: 'rare',
+    image: '/cars/williams.png'
+  },
+  {
+    id: 'haas',
+    name: 'Haas VF-24',
+    description: 'Das amerikanische Team. Made in USA.',
+    price: 1000,
+    rarity: 'rare',
+    image: '/cars/haas.png'
+  },
+  {
+    id: 'cocacola',
+    name: 'Coca-Cola Racing',
+    description: 'Erfrischend schnell. Taste the Speed.',
+    price: 900,
+    rarity: 'rare',
+    image: '/cars/cocacola.png'
+  },
+  {
+    id: 'mcdonalds',
+    name: "McDonald's F1",
+    description: "I'm lovin' it. Mit Extra Speed.",
+    price: 800,
+    rarity: 'rare',
+    image: '/cars/mcdonalds.png'
+  },
+  {
+    id: 'clubmate',
+    name: 'Club-Mate Racer',
+    description: 'Koffein-Power für die Nachtrennen.',
+    price: 700,
+    rarity: 'rare',
+    image: '/cars/clubmate.png'
+  },
+  {
+    id: 'jokoklaas',
+    name: 'Joko & Klaas F1',
+    description: 'Florida TV Special. Chaos auf der Strecke.',
+    price: 600,
+    rarity: 'rare',
+    image: '/cars/jokoklaas.png'
+  },
+  
+  // === COMMON (100-500 Coins) - Direkt kaufbar mit Startguthaben ===
+  {
+    id: 'prosieben',
+    name: 'ProSieben Racing',
+    description: 'We love to entertain you. Auf der Rennstrecke.',
+    price: 500,
     rarity: 'common',
-    image_url: '🏁',
-    available: true
+    image: '/cars/prosieben.png'
+  },
+  {
+    id: 'funnyfrisch',
+    name: 'Funny-Frisch Cruiser',
+    description: 'Ungarisch scharf. Auch auf der Strecke.',
+    price: 400,
+    rarity: 'common',
+    image: '/cars/funnyfrisch.png'
+  },
+  {
+    id: 'fiat',
+    name: 'Fiat 500 F1',
+    description: 'Italienische Eleganz trifft Formel 1.',
+    price: 350,
+    rarity: 'common',
+    image: '/cars/fiat.png'
+  },
+  {
+    id: 'jeep',
+    name: 'Jeep Offroad F1',
+    description: 'Für die härtesten Strecken. Oder so.',
+    price: 300,
+    rarity: 'common',
+    image: '/cars/jeep.png'
+  },
+  {
+    id: 'opelcorsa',
+    name: 'Opel Corsa F1',
+    description: 'Deutschlands Liebling. Jetzt in schnell.',
+    price: 250,
+    rarity: 'common',
+    image: '/cars/opelcorsa.png'
+  },
+  {
+    id: 'lasagne',
+    name: 'Lasagne Bolognese',
+    description: 'Al dente auf der Strecke. Mama mia!',
+    price: 200,
+    rarity: 'common',
+    image: '/cars/lasagne.png'
+  },
+  {
+    id: 'bratwurst',
+    name: 'Bratwurst Express',
+    description: 'Mit Senf. Deutschlands schnellste Wurst.',
+    price: 150,
+    rarity: 'common',
+    image: '/cars/bratwurst.png'
+  },
+  {
+    id: 'multipla',
+    name: 'Fiat Multipla F1',
+    description: 'Das hässlichste Auto. Jetzt in schnell und hässlich.',
+    price: 100,
+    rarity: 'common',
+    image: '/cars/multipla.png'
   }
 ]
 
 export const RARITY_COLORS = {
-  common: { bg: 'bg-gray-600', text: 'text-gray-300', border: 'border-gray-500' },
-  rare: { bg: 'bg-blue-600', text: 'text-blue-300', border: 'border-blue-500' },
-  epic: { bg: 'bg-purple-600', text: 'text-purple-300', border: 'border-purple-500' },
-  legendary: { bg: 'bg-yellow-600', text: 'text-yellow-300', border: 'border-yellow-500' }
+  common: { bg: 'bg-gray-700', text: 'text-gray-300', border: 'border-gray-600', glow: '' },
+  rare: { bg: 'bg-blue-900', text: 'text-blue-400', border: 'border-blue-500', glow: 'shadow-blue-500/20' },
+  epic: { bg: 'bg-purple-900', text: 'text-purple-400', border: 'border-purple-500', glow: 'shadow-purple-500/30' },
+  legendary: { bg: 'bg-yellow-900', text: 'text-yellow-400', border: 'border-yellow-500', glow: 'shadow-yellow-500/40' }
 }
 
-export const CATEGORY_LABELS = {
-  helmet: '🪖 Helme',
-  car: '🏎️ Autos',
-  trophy: '🏆 Trophäen',
-  badge: '🏅 Badges',
-  special: '✨ Specials'
+export const RARITY_LABELS = {
+  common: 'Standard',
+  rare: 'Selten',
+  epic: 'Episch',
+  legendary: 'Legendär'
 }
 
+// Für Kompatibilität
+export const STARTING_COINS = 500

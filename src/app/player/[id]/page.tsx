@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
-import { supabase, Profile, ShopItem } from '@/lib/supabase'
-import { SHOP_ITEMS, RARITY_COLORS, CATEGORY_LABELS } from '@/lib/shopItems'
+import { supabase, Profile } from '@/lib/supabase'
+import { CAR_ITEMS, RARITY_COLORS, CarItem } from '@/lib/shopItems'
 import { 
   Trophy, 
   Target,
@@ -16,7 +16,6 @@ import {
   User
 } from 'lucide-react'
 import Avatar from '@/components/Avatar'
-import ShopItemIcon from '@/components/ShopItemIcon'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 
@@ -25,7 +24,7 @@ export default function PlayerProfilePage() {
   const playerId = params.id as string
   
   const [player, setPlayer] = useState<Profile | null>(null)
-  const [ownedItems, setOwnedItems] = useState<ShopItem[]>([])
+  const [ownedCars, setOwnedCars] = useState<CarItem[]>([])
   const [rank, setRank] = useState(0)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -61,7 +60,7 @@ export default function PlayerProfilePage() {
           setRank(playerRank)
         }
         
-        // Gekaufte Items laden
+        // Gekaufte Autos laden
         const { data: userItems } = await supabase
           .from('user_items')
           .select('item_id')
@@ -69,9 +68,9 @@ export default function PlayerProfilePage() {
         
         if (userItems) {
           const owned = userItems
-            .map(ui => SHOP_ITEMS.find(item => item.id === ui.item_id))
-            .filter((item): item is ShopItem => item !== undefined)
-          setOwnedItems(owned)
+            .map(ui => CAR_ITEMS.find(item => item.id === ui.item_id))
+            .filter((item): item is CarItem => item !== undefined)
+          setOwnedCars(owned)
         }
       } catch (e) {
         console.error('Error loading player:', e)
@@ -179,48 +178,39 @@ export default function PlayerProfilePage() {
             <div className="text-xs text-gray-500">Tipps</div>
           </div>
           <div className="bg-zinc-900 rounded-xl p-4 border border-zinc-800">
-            <ShoppingBag className="w-5 h-5 text-purple-500 mb-2" />
-            <div className="text-2xl font-bold text-white">{ownedItems.length}</div>
-            <div className="text-xs text-gray-500">Items gesammelt</div>
+            <span className="text-xl block mb-2">🏎️</span>
+            <div className="text-2xl font-bold text-white">{ownedCars.length}</div>
+            <div className="text-xs text-gray-500">Autos</div>
           </div>
         </div>
 
-        {/* Sammlung */}
+        {/* Garage */}
         <div className="bg-zinc-900 rounded-xl border border-zinc-800 overflow-hidden">
           <div className="p-4 border-b border-zinc-800">
             <h2 className="font-bold text-white flex items-center gap-2">
-              <ShoppingBag className="w-5 h-5 text-yellow-500" />
-              {player.username}&apos;s Sammlung
+              <span className="text-xl">🏎️</span>
+              {player.username}&apos;s Garage
             </h2>
           </div>
 
-          {ownedItems.length > 0 ? (
-            <div className="p-4">
-              {/* Gruppiert nach Kategorie */}
-              {(['helmet', 'car', 'trophy', 'badge', 'special'] as const).map(cat => {
-                const catItems = ownedItems.filter(item => item.category === cat)
-                if (catItems.length === 0) return null
-                
+          {ownedCars.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4">
+              {ownedCars.map(car => {
+                const rarityStyle = RARITY_COLORS[car.rarity]
                 return (
-                  <div key={cat} className="mb-4 last:mb-0">
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">
-                      {CATEGORY_LABELS[cat]} ({catItems.length})
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {catItems.map(item => {
-                        const rarityStyle = RARITY_COLORS[item.rarity]
-                        return (
-                          <div 
-                            key={item.id}
-                            className={`relative p-3 rounded-xl border-2 ${rarityStyle.border} bg-black/50 flex flex-col items-center`}
-                            title={`${item.name} - ${item.description}`}
-                          >
-                            <ShopItemIcon itemId={item.id} category={item.category} size="sm" />
-                            <div className="text-xs font-medium text-white truncate max-w-[80px] mt-1">{item.name}</div>
-                            <div className={`text-[10px] ${rarityStyle.text} uppercase`}>{item.rarity}</div>
-                          </div>
-                        )
-                      })}
+                  <div 
+                    key={car.id}
+                    className={`relative rounded-xl border ${rarityStyle.border} bg-black/50 overflow-hidden`}
+                    title={car.description}
+                  >
+                    <img 
+                      src={car.image} 
+                      alt={car.name}
+                      className="w-full aspect-video object-contain bg-zinc-900"
+                    />
+                    <div className="p-2">
+                      <div className="text-xs font-bold text-white truncate">{car.name}</div>
+                      <div className={`text-[10px] ${rarityStyle.text} uppercase`}>{car.rarity}</div>
                     </div>
                   </div>
                 )
@@ -228,8 +218,8 @@ export default function PlayerProfilePage() {
             </div>
           ) : (
             <div className="p-8 text-center">
-              <ShoppingBag className="w-12 h-12 mx-auto text-gray-600 mb-3" />
-              <p className="text-gray-500">{player.username} hat noch keine Items gesammelt</p>
+              <span className="text-5xl block mb-3">🏎️</span>
+              <p className="text-gray-500">{player.username} hat noch keine Autos</p>
             </div>
           )}
         </div>
