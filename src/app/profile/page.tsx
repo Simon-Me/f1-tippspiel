@@ -143,10 +143,11 @@ export default function ProfilePage() {
       if (data.avatar_url) {
         setAvatarUrl(data.avatar_url)
         await refreshProfile()
+        alert('Profilbild gespeichert! ✅')
       }
     } catch (error) {
       console.error('Upload failed:', error)
-      alert(`Upload fehlgeschlagen: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`)
+      alert(`Upload fehlgeschlagen: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}\n\nTipp: Prüfe ob SUPABASE_SERVICE_ROLE_KEY in Vercel gesetzt ist!`)
     } finally {
       setUploading(false)
     }
