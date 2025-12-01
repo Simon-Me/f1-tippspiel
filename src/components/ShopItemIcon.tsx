@@ -78,7 +78,7 @@ export default function ShopItemIcon({ itemId, category, size = 'md', className 
       <defs>
         <linearGradient id={`trophy-${itemId}`} x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor={color1} />
-          <stop offset="100%" stopColor={color1}88 />
+          <stop offset="100%" stopColor={`${color1}88`} />
         </linearGradient>
       </defs>
       {/* Cup */}
@@ -103,7 +103,7 @@ export default function ShopItemIcon({ itemId, category, size = 'md', className 
       <defs>
         <linearGradient id={`badge-${itemId}`} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor={color1} />
-          <stop offset="100%" stopColor={color1}99 />
+          <stop offset="100%" stopColor={`${color1}99`} />
         </linearGradient>
       </defs>
       {/* Shield shape */}
@@ -129,7 +129,7 @@ export default function ShopItemIcon({ itemId, category, size = 'md', className 
       <defs>
         <radialGradient id={`special-${itemId}`}>
           <stop offset="0%" stopColor={color1} />
-          <stop offset="100%" stopColor={color1}44 />
+          <stop offset="100%" stopColor={`${color1}44`} />
         </radialGradient>
       </defs>
       {/* Star burst */}
