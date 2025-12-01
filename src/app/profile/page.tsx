@@ -80,6 +80,36 @@ export default function ProfilePage() {
     }
   }, [profile])
 
+  const compressImage = (file: File, maxWidth = 400, quality = 0.8): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        let width = img.width
+        let height = img.height
+        
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width
+          width = maxWidth
+        }
+        
+        canvas.width = width
+        canvas.height = height
+        
+        const ctx = canvas.getContext('2d')
+        ctx?.drawImage(img, 0, 0, width, height)
+        
+        canvas.toBlob(
+          (blob) => blob ? resolve(blob) : reject('Failed to compress'),
+          'image/jpeg',
+          quality
+        )
+      }
+      img.onerror = reject
+      img.src = URL.createObjectURL(file)
+    })
+  }
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !user) return
@@ -87,14 +117,21 @@ export default function ProfilePage() {
     setUploading(true)
     
     try {
+      // Komprimiere das Bild auf max 400px und 80% Qualität
+      const compressedBlob = await compressImage(file, 400, 0.8)
+      
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('file', new File([compressedBlob], 'avatar.jpg', { type: 'image/jpeg' }))
       formData.append('userId', user.id)
       
       const res = await fetch('/api/upload-avatar', {
         method: 'POST',
         body: formData
       })
+      
+      if (!res.ok) {
+        throw new Error(`Upload failed: ${res.status}`)
+      }
       
       const data = await res.json()
       
@@ -104,6 +141,7 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error('Upload failed:', error)
+      alert('Bild konnte nicht hochgeladen werden. Bitte versuche ein kleineres Bild.')
     } finally {
       setUploading(false)
     }

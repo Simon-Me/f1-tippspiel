@@ -10,7 +10,7 @@ import { ShoppingBag, Coins, Check, Loader2, Lock } from 'lucide-react'
 type Category = 'all' | 'helmet' | 'car' | 'trophy' | 'badge' | 'special'
 
 export default function ShopPage() {
-  const { user } = useAuth()
+  const { user, refreshProfile } = useAuth()
   const [coins, setCoins] = useState(0)
   const [ownedItems, setOwnedItems] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
@@ -84,6 +84,10 @@ export default function ShopPage() {
       setCoins(coins - price)
       setOwnedItems([...ownedItems, itemId])
       setMessage({ type: 'success', text: 'Gekauft! 🎉' })
+      
+      // Update Navbar Coins
+      await refreshProfile()
+      
       setTimeout(() => setMessage(null), 3000)
     } catch (error) {
       console.error('Error buying item:', error)
