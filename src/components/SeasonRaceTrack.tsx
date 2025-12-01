@@ -17,7 +17,7 @@ interface SeasonRaceTrackProps {
 }
 
 // Platzhalter TopView - Opel TopView
-const DEFAULT_CAR_TOP = '/CARS/TOP_OPEL.png'
+const DEFAULT_CAR_TOP = '/cars/top/opel.png'
 
 export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps) {
   const [players, setPlayers] = useState<PlayerWithCar[]>([])
