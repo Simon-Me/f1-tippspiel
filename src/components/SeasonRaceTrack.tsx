@@ -112,19 +112,19 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
               style={{ paddingLeft: `${position}%` }}
             >
               {/* Auto */}
-              <div className={`relative flex items-center gap-2 transition-all ${isMe ? 'scale-110 z-10' : ''}`}>
+              <div className={`relative flex items-center gap-1 transition-all ${isMe ? 'scale-110 z-10' : ''}`}>
                 <img 
                   src={DEFAULT_CAR_TOP}
                   alt=""
-                  className={`h-10 w-auto object-contain ${isMe ? 'drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]' : ''}`}
+                  className={`h-8 w-auto object-contain ${isMe ? 'drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]' : ''}`}
                   style={{ 
                     filter: isMe ? 'none' : 'grayscale(30%) brightness(0.8)',
-                    transform: 'rotate(90deg)'
+                    transform: 'rotate(-90deg)'
                   }}
                 />
-                {/* Name */}
-                <span className={`text-xs font-medium whitespace-nowrap ${isMe ? 'text-red-400' : 'text-gray-400'}`}>
-                  {player.username}
+                {/* Name + Punkte */}
+                <span className={`text-[10px] font-medium whitespace-nowrap ${isMe ? 'text-red-400' : 'text-gray-400'}`}>
+                  {player.username} <span className="text-gray-500">({player.total_points})</span>
                 </span>
               </div>
             </div>
