@@ -38,19 +38,28 @@ export default function DashboardPage() {
     
     try {
       // Nächstes Rennen aus API laden
-      const apiRes = await fetch('https://api.jolpi.ca/ergast/f1/2025.json')
+      const apiRes = await fetch('https://api.jolpi.ca/ergast/f1/2025.json', { cache: 'no-store' })
       const apiData = await apiRes.json()
       const allRaces = apiData.MRData?.RaceTable?.Races || []
       
-      // Finde das nächste Rennen (heute oder in der Zukunft)
+      console.log('[Dashboard] Alle Rennen aus API:', allRaces.length)
+      
+      // Finde das nächste Rennen (das noch nicht vorbei ist)
       const now = new Date()
-      const upcomingRace = allRaces.find((race: { date: string; time?: string }) => {
+      let upcomingRace = null
+      
+      for (const race of allRaces) {
         const raceDate = new Date(`${race.date}T${race.time || '14:00:00Z'}`)
-        // Rennen ist relevant wenn es noch nicht 3 Tage her ist
+        // Rennen ist "aktuell" wenn es in der Zukunft liegt ODER weniger als 3 Tage her ist
         const threeDaysAfter = new Date(raceDate)
         threeDaysAfter.setDate(threeDaysAfter.getDate() + 3)
-        return now < threeDaysAfter
-      })
+        
+        if (now < threeDaysAfter) {
+          upcomingRace = race
+          console.log('[Dashboard] Nächstes Rennen gefunden:', race.raceName, 'Round:', race.round, 'Date:', race.date)
+          break
+        }
+      }
       
       if (upcomingRace) {
         // Finde das Rennen in der Datenbank
@@ -60,6 +69,8 @@ export default function DashboardPage() {
           .eq('season', 2025)
           .eq('round', parseInt(upcomingRace.round))
           .limit(1)
+        
+        console.log('[Dashboard] Rennen aus DB:', races?.[0]?.race_name || 'nicht gefunden')
         
         if (races?.[0]) {
           setNextRace(races[0])
@@ -71,7 +82,11 @@ export default function DashboardPage() {
             .eq('race_id', races[0].id)
           
           if (preds) setUserPredictions(preds)
+        } else {
+          console.log('[Dashboard] Rennen nicht in DB gefunden, Round:', upcomingRace.round)
         }
+      } else {
+        console.log('[Dashboard] Kein kommendes Rennen gefunden')
       }
       
       const { data: profiles } = await supabase
@@ -81,7 +96,7 @@ export default function DashboardPage() {
       
       if (profiles) setAllPlayers(profiles)
     } catch (e) {
-      console.error(e)
+      console.error('[Dashboard] Fehler:', e)
     } finally {
       setLoadingData(false)
     }
