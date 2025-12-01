@@ -29,3 +29,4 @@ async function compressImages() {
 
 compressImages().catch(console.error);
 
+
