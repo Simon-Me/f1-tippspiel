@@ -102,17 +102,26 @@ export async function GET() {
       })
     }
     
+    // Korrektur für falsche Fahrernummern in der API
+    // Verstappen fährt mit #1 seit 2022, aber die API zeigt noch #33
+    const DRIVER_NUMBER_FIX: Record<string, number> = {
+      'VER': 1,  // Verstappen fährt #1 als Weltmeister
+    }
+    
     // Konvertiere zu unserem Format
-    const drivers = results.map((r) => ({
-      id: parseInt(r.Driver.permanentNumber) || parseInt(r.number),
-      driver_number: parseInt(r.Driver.permanentNumber) || parseInt(r.number),
-      code: r.Driver.code,
-      full_name: `${r.Driver.givenName} ${r.Driver.familyName}`,
-      team_name: normalizeTeamName(r.Constructor.constructorId, r.Constructor.name),
-      team_id: r.Constructor.constructorId,
-      team_color: TEAM_COLORS[r.Constructor.constructorId] || '#666666',
-      nationality: r.Driver.nationality,
-    }))
+    const drivers = results.map((r) => {
+      const correctNumber = DRIVER_NUMBER_FIX[r.Driver.code] || parseInt(r.Driver.permanentNumber) || parseInt(r.number)
+      return {
+        id: correctNumber,
+        driver_number: correctNumber,
+        code: r.Driver.code,
+        full_name: `${r.Driver.givenName} ${r.Driver.familyName}`,
+        team_name: normalizeTeamName(r.Constructor.constructorId, r.Constructor.name),
+        team_id: r.Constructor.constructorId,
+        team_color: TEAM_COLORS[r.Constructor.constructorId] || '#666666',
+        nationality: r.Driver.nationality,
+      }
+    })
     
     // Sortiere nach Team
     drivers.sort((a, b) => a.team_name.localeCompare(b.team_name))

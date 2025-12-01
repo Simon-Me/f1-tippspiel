@@ -24,6 +24,7 @@ const POINTS = {
   QUALI_POLE: 10,
 }
 
+// Verstappen fährt #1 als Weltmeister, aber die API gibt manchmal #33 zurück
 const DRIVER_NUMBER_MAP: Record<string, number> = {
   'VER': 1, 'NOR': 4, 'LEC': 16, 'PIA': 81, 'SAI': 55,
   'RUS': 63, 'HAM': 44, 'ALO': 14, 'STR': 18, 'HUL': 27,
@@ -33,7 +34,9 @@ const DRIVER_NUMBER_MAP: Record<string, number> = {
 }
 
 function getDriverNumber(code: string, permanentNumber?: string): number {
-  return DRIVER_NUMBER_MAP[code] || parseInt(permanentNumber || '0')
+  // Immer zuerst unsere Map verwenden (für korrekte Nummern wie VER=1)
+  if (DRIVER_NUMBER_MAP[code]) return DRIVER_NUMBER_MAP[code]
+  return parseInt(permanentNumber || '0')
 }
 
 export async function POST(request: Request) {
