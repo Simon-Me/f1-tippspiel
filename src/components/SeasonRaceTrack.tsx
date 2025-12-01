@@ -112,7 +112,7 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
               style={{ paddingLeft: `${position}%` }}
             >
               {/* Auto + Tooltip */}
-              <div className={`relative flex items-center transition-all ${isMe ? 'scale-110 z-10' : ''}`}>
+              <div className={`relative flex items-center transition-all ${isMe ? 'scale-110 z-10' : ''} group-hover:z-20`}>
                 <img 
                   src={DEFAULT_CAR_TOP}
                   alt=""
@@ -122,13 +122,18 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
                     transform: 'rotate(180deg)'
                   }}
                 />
-                {/* Name + Punkte - nur bei Hover */}
-                <span className={`absolute left-full ml-2 text-xs font-medium whitespace-nowrap 
+                {/* Name + Punkte - über dem Auto bei Hover */}
+                <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-1
                   opacity-0 group-hover:opacity-100 transition-opacity duration-200
-                  bg-zinc-800/90 px-2 py-1 rounded-md
-                  ${isMe ? 'text-red-400' : 'text-gray-300'}`}>
-                  {player.username} <span className="text-gray-500">({player.total_points})</span>
-                </span>
+                  bg-zinc-800/95 px-3 py-1.5 rounded-lg shadow-lg border border-zinc-700
+                  whitespace-nowrap pointer-events-none`}>
+                  <span className={`font-semibold ${isMe ? 'text-red-400' : 'text-white'}`}>
+                    {player.username}
+                  </span>
+                  <span className="text-yellow-400 ml-2">{player.total_points} Pkt</span>
+                  {/* Pfeil nach unten */}
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-800/95" />
+                </div>
               </div>
             </div>
           )

@@ -187,7 +187,7 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-black text-white">
       <Navbar />
       
-      <main className="pt-24 pb-16 px-6 max-w-2xl mx-auto">
+      <main className="pt-24 pb-16 px-4 sm:px-6 lg:px-12 xl:px-24 max-w-7xl mx-auto">
         {/* Begrüßung */}
         <div className="mb-12 flex items-center gap-4">
           <Avatar url={profile?.avatar_url} username={profile?.username} size="xl" />
@@ -216,8 +216,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* WM Rennstrecke Visualisierung - Volle Breite */}
-        <div className="mb-12 -mx-4 sm:-mx-6 lg:-mx-12 xl:-mx-24">
+        {/* WM Rennstrecke Visualisierung */}
+        <div className="mb-12">
           <SeasonRaceTrack currentUserId={user?.id} />
         </div>
 
