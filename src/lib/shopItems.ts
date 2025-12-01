@@ -1,6 +1,7 @@
 // Shop Items - Nur Autos!
 // Startguthaben: 500 Coins
 // 10 Punkte = 100 Coins
+// Perfektes Event (Quali+Sprint+Rennen): 108 Punkte = 1080 Coins
 
 export interface CarItem {
   id: string
@@ -12,164 +13,14 @@ export interface CarItem {
 }
 
 export const CAR_ITEMS: CarItem[] = [
-  // === LEGENDARY (3000-5000 Coins) - Nur für Top-Tipper ===
-  {
-    id: 'gold',
-    name: 'Golden F1',
-    description: 'Der ultimative Flex. Pures Gold auf der Strecke.',
-    price: 5000,
-    rarity: 'legendary',
-    image: '/cars/gold.webp'
-  },
-  {
-    id: 'redbull',
-    name: 'Red Bull RB20',
-    description: 'Das dominante Auto des 4x Weltmeisters.',
-    price: 4000,
-    rarity: 'legendary',
-    image: '/cars/redbull.webp'
-  },
-  {
-    id: 'ferrari',
-    name: 'Ferrari SF-24',
-    description: 'La Rossa - Die rote Göttin aus Maranello.',
-    price: 3500,
-    rarity: 'legendary',
-    image: '/cars/ferrari.webp'
-  },
-  
-  // === EPIC (1500-2500 Coins) - Für gute Tipper ===
-  {
-    id: 'mercedes',
-    name: 'Mercedes W15',
-    description: 'Der Silberpfeil. 8x Konstrukteurs-Weltmeister.',
-    price: 2500,
-    rarity: 'epic',
-    image: '/cars/mercedes.webp'
-  },
-  {
-    id: 'audi',
-    name: 'Audi F1',
-    description: 'Die Zukunft. Ab 2026 in der Formel 1.',
-    price: 2000,
-    rarity: 'epic',
-    image: '/cars/audi.webp'
-  },
-  {
-    id: 'moncler',
-    name: 'Moncler Racing',
-    description: 'Luxus auf der Strecke. Für die Stylischen.',
-    price: 1800,
-    rarity: 'epic',
-    image: '/cars/moncler.webp'
-  },
-  {
-    id: 'nike',
-    name: 'Nike Speed',
-    description: 'Just Do It. Auf 350 km/h.',
-    price: 1500,
-    rarity: 'epic',
-    image: '/cars/nike.webp'
-  },
-  
-  // === RARE (600-1200 Coins) - Mit etwas Tippen erreichbar ===
-  {
-    id: 'williams',
-    name: 'Williams FW46',
-    description: 'Die Legende kehrt zurück. 9x Weltmeister-Team.',
-    price: 1200,
-    rarity: 'rare',
-    image: '/cars/williams.webp'
-  },
-  {
-    id: 'haas',
-    name: 'Haas VF-24',
-    description: 'Das amerikanische Team. Made in USA.',
-    price: 1000,
-    rarity: 'rare',
-    image: '/cars/haas.webp'
-  },
-  {
-    id: 'cocacola',
-    name: 'Coca-Cola Racing',
-    description: 'Erfrischend schnell. Taste the Speed.',
-    price: 900,
-    rarity: 'rare',
-    image: '/cars/cocacola.webp'
-  },
-  {
-    id: 'mcdonalds',
-    name: "McDonald's F1",
-    description: "I'm lovin' it. Mit Extra Speed.",
-    price: 800,
-    rarity: 'rare',
-    image: '/cars/mcdonalds.webp'
-  },
-  {
-    id: 'clubmate',
-    name: 'Club-Mate Racer',
-    description: 'Koffein-Power für die Nachtrennen.',
-    price: 700,
-    rarity: 'rare',
-    image: '/cars/clubmate.webp'
-  },
-  {
-    id: 'jokoklaas',
-    name: 'Joko & Klaas F1',
-    description: 'Florida TV Special. Chaos auf der Strecke.',
-    price: 600,
-    rarity: 'rare',
-    image: '/cars/jokoklaas.webp'
-  },
-  
   // === COMMON (100-500 Coins) - Direkt kaufbar mit Startguthaben ===
   {
-    id: 'prosieben',
-    name: 'ProSieben Racing',
-    description: 'We love to entertain you. Auf der Rennstrecke.',
-    price: 500,
+    id: 'multipla',
+    name: 'Fiat Multipla F1',
+    description: 'Das hässlichste Auto. Jetzt in schnell und hässlich.',
+    price: 100,
     rarity: 'common',
-    image: '/cars/prosieben.webp'
-  },
-  {
-    id: 'funnyfrisch',
-    name: 'Funny-Frisch Cruiser',
-    description: 'Ungarisch scharf. Auch auf der Strecke.',
-    price: 400,
-    rarity: 'common',
-    image: '/cars/funnyfrisch.webp'
-  },
-  {
-    id: 'fiat',
-    name: 'Fiat 500 F1',
-    description: 'Italienische Eleganz trifft Formel 1.',
-    price: 350,
-    rarity: 'common',
-    image: '/cars/fiat.webp'
-  },
-  {
-    id: 'jeep',
-    name: 'Jeep Offroad F1',
-    description: 'Für die härtesten Strecken. Oder so.',
-    price: 300,
-    rarity: 'common',
-    image: '/cars/jeep.webp'
-  },
-  {
-    id: 'opelcorsa',
-    name: 'Opel Corsa F1',
-    description: 'Deutschlands Liebling. Jetzt in schnell.',
-    price: 250,
-    rarity: 'common',
-    image: '/cars/opelcorsa.webp'
-  },
-  {
-    id: 'lasagne',
-    name: 'Lasagne Bolognese',
-    description: 'Al dente auf der Strecke. Mama mia!',
-    price: 200,
-    rarity: 'common',
-    image: '/cars/lasagne.webp'
+    image: '/cars/multipla.webp'
   },
   {
     id: 'bratwurst',
@@ -180,12 +31,162 @@ export const CAR_ITEMS: CarItem[] = [
     image: '/cars/bratwurst.webp'
   },
   {
-    id: 'multipla',
-    name: 'Fiat Multipla F1',
-    description: 'Das hässlichste Auto. Jetzt in schnell und hässlich.',
-    price: 100,
+    id: 'lasagne',
+    name: 'Lasagne Bolognese',
+    description: 'Al dente auf der Strecke. Mama mia!',
+    price: 200,
     rarity: 'common',
-    image: '/cars/multipla.webp'
+    image: '/cars/lasagne.webp'
+  },
+  {
+    id: 'opelcorsa',
+    name: 'Opel Corsa F1',
+    description: 'Deutschlands Liebling. Jetzt in schnell.',
+    price: 250,
+    rarity: 'common',
+    image: '/cars/opelcorsa.webp'
+  },
+  {
+    id: 'jeep',
+    name: 'Jeep Offroad F1',
+    description: 'Für die härtesten Strecken. Oder so.',
+    price: 300,
+    rarity: 'common',
+    image: '/cars/jeep.webp'
+  },
+  {
+    id: 'fiat',
+    name: 'Fiat 500 F1',
+    description: 'Italienische Eleganz trifft Formel 1.',
+    price: 350,
+    rarity: 'common',
+    image: '/cars/fiat.webp'
+  },
+  {
+    id: 'funnyfrisch',
+    name: 'Funny-Frisch Cruiser',
+    description: 'Ungarisch scharf. Auch auf der Strecke.',
+    price: 400,
+    rarity: 'common',
+    image: '/cars/funnyfrisch.webp'
+  },
+  {
+    id: 'prosieben',
+    name: 'ProSieben Racing',
+    description: 'We love to entertain you. Auf der Rennstrecke.',
+    price: 500,
+    rarity: 'common',
+    image: '/cars/prosieben.webp'
+  },
+  
+  // === RARE (600-1200 Coins) - Mit etwas Tippen erreichbar ===
+  {
+    id: 'jokoklaas',
+    name: 'Joko & Klaas F1',
+    description: 'Florida TV Special. Chaos auf der Strecke.',
+    price: 600,
+    rarity: 'rare',
+    image: '/cars/jokoklaas.webp'
+  },
+  {
+    id: 'clubmate',
+    name: 'Club-Mate Racer',
+    description: 'Koffein-Power für die Nachtrennen.',
+    price: 700,
+    rarity: 'rare',
+    image: '/cars/clubmate.webp'
+  },
+  {
+    id: 'mcdonalds',
+    name: "McDonald's F1",
+    description: "I'm lovin' it. Mit Extra Speed.",
+    price: 800,
+    rarity: 'rare',
+    image: '/cars/mcdonalds.webp'
+  },
+  {
+    id: 'cocacola',
+    name: 'Coca-Cola Racing',
+    description: 'Erfrischend schnell. Taste the Speed.',
+    price: 900,
+    rarity: 'rare',
+    image: '/cars/cocacola.webp'
+  },
+  {
+    id: 'haas',
+    name: 'Haas VF-24',
+    description: 'Das amerikanische Team. Made in USA.',
+    price: 1000,
+    rarity: 'rare',
+    image: '/cars/haas.webp'
+  },
+  {
+    id: 'williams',
+    name: 'Williams FW46',
+    description: 'Die Legende kehrt zurück. 9x Weltmeister-Team.',
+    price: 1200,
+    rarity: 'rare',
+    image: '/cars/williams.webp'
+  },
+  
+  // === EPIC (1500-2500 Coins) - Für gute Tipper ===
+  {
+    id: 'nike',
+    name: 'Nike Speed',
+    description: 'Just Do It. Auf 350 km/h.',
+    price: 1500,
+    rarity: 'epic',
+    image: '/cars/nike.webp'
+  },
+  {
+    id: 'moncler',
+    name: 'Moncler Racing',
+    description: 'Luxus auf der Strecke. Für die Stylischen.',
+    price: 1800,
+    rarity: 'epic',
+    image: '/cars/moncler.webp'
+  },
+  {
+    id: 'audi',
+    name: 'Audi F1',
+    description: 'Die Zukunft. Ab 2026 in der Formel 1.',
+    price: 2000,
+    rarity: 'epic',
+    image: '/cars/audi.webp'
+  },
+  {
+    id: 'mercedes',
+    name: 'Mercedes W15',
+    description: 'Der Silberpfeil. 8x Konstrukteurs-Weltmeister.',
+    price: 2500,
+    rarity: 'epic',
+    image: '/cars/mercedes.webp'
+  },
+  
+  // === LEGENDARY (3000-5000 Coins) - Nur für Top-Tipper ===
+  {
+    id: 'ferrari',
+    name: 'Ferrari SF-24',
+    description: 'La Rossa - Die rote Göttin aus Maranello.',
+    price: 3500,
+    rarity: 'legendary',
+    image: '/cars/ferrari.webp'
+  },
+  {
+    id: 'redbull',
+    name: 'Red Bull RB20',
+    description: 'Das dominante Auto des 4x Weltmeisters.',
+    price: 4000,
+    rarity: 'legendary',
+    image: '/cars/redbull.webp'
+  },
+  {
+    id: 'gold',
+    name: 'Golden F1',
+    description: 'Der ultimative Flex. Pures Gold auf der Strecke.',
+    price: 5000,
+    rarity: 'legendary',
+    image: '/cars/gold.webp'
   }
 ]
 
