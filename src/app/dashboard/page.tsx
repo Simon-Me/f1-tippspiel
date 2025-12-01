@@ -44,17 +44,15 @@ export default function DashboardPage() {
       
       console.log('[Dashboard] Alle Rennen aus API:', allRaces.length)
       
-      // Finde das nächste Rennen (das noch nicht vorbei ist)
+      // Finde das nächste Rennen (erstes in der Zukunft)
       const now = new Date()
       let upcomingRace = null
       
       for (const race of allRaces) {
         const raceDate = new Date(`${race.date}T${race.time || '14:00:00Z'}`)
-        // Rennen ist "aktuell" wenn es in der Zukunft liegt ODER weniger als 3 Tage her ist
-        const threeDaysAfter = new Date(raceDate)
-        threeDaysAfter.setDate(threeDaysAfter.getDate() + 3)
         
-        if (now < threeDaysAfter) {
+        // Rennen ist kommend wenn es in der Zukunft liegt
+        if (raceDate > now) {
           upcomingRace = race
           console.log('[Dashboard] Nächstes Rennen gefunden:', race.raceName, 'Round:', race.round, 'Date:', race.date)
           break
