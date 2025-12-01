@@ -176,11 +176,11 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
                   <Car className="w-4 h-4" />
                   <span>Fahrzeug</span>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col items-center gap-3">
                   <img 
                     src={selectedPlayer.equippedCarImage || '/cars/opelcorsa.webp'} 
                     alt={selectedPlayer.equippedCarName || 'Standard'}
-                    className="h-24 w-auto object-contain rounded-lg"
+                    className="h-40 w-auto object-contain"
                   />
                   <span className="font-semibold text-white text-lg">
                     {selectedPlayer.equippedCarName || <span className="text-gray-500 italic">Kein Auto</span>}
