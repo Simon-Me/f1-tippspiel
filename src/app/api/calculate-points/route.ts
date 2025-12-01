@@ -20,6 +20,7 @@ const POINTS = {
   SPRINT_P1: 15,
   SPRINT_P2: 10,
   SPRINT_P3: 5,
+  SPRINT_ON_PODIUM: 3, // Bonus wenn Fahrer aufs Podium kam, aber falsche Position
   // Qualifying
   QUALI_POLE: 10,
 }
@@ -37,6 +38,19 @@ function getDriverNumber(code: string, permanentNumber?: string): number {
   // Immer zuerst unsere Map verwenden (für korrekte Nummern wie VER=1)
   if (DRIVER_NUMBER_MAP[code]) return DRIVER_NUMBER_MAP[code]
   return parseInt(permanentNumber || '0')
+}
+
+// GET für einfachen Browser-Aufruf
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const round = searchParams.get('round')
+  
+  // Erstelle einen Fake-Request für POST
+  const fakeRequest = {
+    json: async () => ({ round: round ? parseInt(round) : undefined, sessionType: 'all' })
+  } as Request
+  
+  return POST(fakeRequest)
 }
 
 export async function POST(request: Request) {
@@ -163,12 +177,32 @@ export async function POST(request: Request) {
             .eq('session_type', 'sprint')
 
           const pointsAwarded: number[] = []
+          const sprintPodium = [p1Num, p2Num, p3Num].filter(n => n !== null)
 
           for (const pred of predictions || []) {
             let points = 0
-            if (pred.p1_driver === p1Num) points += POINTS.SPRINT_P1
-            if (pred.p2_driver === p2Num) points += POINTS.SPRINT_P2
-            if (pred.p3_driver === p3Num) points += POINTS.SPRINT_P3
+            
+            // P1
+            if (pred.p1_driver === p1Num) {
+              points += POINTS.SPRINT_P1
+            } else if (pred.p1_driver && sprintPodium.includes(pred.p1_driver)) {
+              points += POINTS.SPRINT_ON_PODIUM
+            }
+            
+            // P2
+            if (pred.p2_driver === p2Num) {
+              points += POINTS.SPRINT_P2
+            } else if (pred.p2_driver && sprintPodium.includes(pred.p2_driver)) {
+              points += POINTS.SPRINT_ON_PODIUM
+            }
+            
+            // P3
+            if (pred.p3_driver === p3Num) {
+              points += POINTS.SPRINT_P3
+            } else if (pred.p3_driver && sprintPodium.includes(pred.p3_driver)) {
+              points += POINTS.SPRINT_ON_PODIUM
+            }
+            
             pointsAwarded.push(points)
 
             await supabase
