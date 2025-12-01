@@ -114,10 +114,10 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
       </div>
 
       {/* Strecke */}
-      <div className="relative px-4 md:px-6 py-4 md:py-6" style={{ minHeight: `${sortedPlayers.length * 50 + 30}px` }}>
+      <div className="relative px-4 md:px-8 py-4 md:py-6" style={{ minHeight: `${sortedPlayers.length * 60 + 40}px` }}>
         {/* Start/Ziel Linien */}
-        <div className="absolute left-4 md:left-8 top-0 bottom-0 w-0.5 md:w-1 bg-green-500/50" />
-        <div className="absolute right-4 md:right-8 top-0 bottom-0 w-1 md:w-2 bg-gradient-to-b from-white via-black to-white"
+        <div className="absolute left-4 md:left-10 top-0 bottom-0 w-0.5 md:w-1 bg-green-500/50" />
+        <div className="absolute right-4 md:right-10 top-0 bottom-0 w-1 md:w-2 bg-gradient-to-b from-white via-black to-white"
              style={{ backgroundSize: '100% 8px' }} />
 
         {/* Spieler */}
@@ -129,18 +129,18 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
           return (
             <div
               key={player.id}
-              className="relative flex items-center h-10 md:h-14 mb-1 md:mb-2 group"
+              className="relative flex items-center h-12 md:h-20 mb-1 md:mb-2 group"
               style={{ paddingLeft: `${position}%` }}
               onMouseEnter={() => setSelectedPlayer(player)}
               onMouseLeave={() => setSelectedPlayer(null)}
             >
-              {/* Auto - feste Größe für Konsistenz */}
+              {/* Auto */}
               <div className="relative flex items-center transition-all cursor-pointer group-hover:z-20 group-hover:scale-105">
                 <img 
                   src={getCarTopView(player.equippedCarId)}
                   alt=""
-                  className="h-8 md:h-12 object-contain"
-                  style={{ transform: 'rotate(180deg)', width: 'auto', maxWidth: '60px' }}
+                  className="h-10 md:h-20 object-contain"
+                  style={{ transform: 'rotate(180deg)' }}
                 />
               </div>
             </div>
