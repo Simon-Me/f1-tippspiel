@@ -20,8 +20,19 @@ interface SeasonRaceTrackProps {
   currentUserId?: string
 }
 
-// Platzhalter TopView - Opel TopView
-const DEFAULT_CAR_TOP = '/cars/top/opel.png'
+// Standard TopView - Opel Corsa
+const DEFAULT_CAR_TOP = '/cars/top/opelcorsa.png'
+
+// Verfügbare Top-View Bilder
+const AVAILABLE_TOP_VIEWS = ['bratwurst', 'fiat', 'jeep', 'jokoklaas', 'opelcorsa', 'prosieben', 'redbull']
+
+// Hole das Top-View Bild für ein Auto (falls vorhanden)
+function getCarTopView(carId?: string): string {
+  if (carId && AVAILABLE_TOP_VIEWS.includes(carId)) {
+    return `/cars/top/${carId}.png`
+  }
+  return DEFAULT_CAR_TOP
+}
 
 export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps) {
   const [players, setPlayers] = useState<PlayerWithCar[]>([])
@@ -122,7 +133,7 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
               {/* Auto */}
               <div className="relative flex items-center transition-all cursor-pointer group-hover:z-20 group-hover:scale-105">
                 <img 
-                  src={DEFAULT_CAR_TOP}
+                  src={getCarTopView(player.equippedCarId)}
                   alt=""
                   className="h-14 md:h-16 w-auto object-contain"
                   style={{ transform: 'rotate(180deg)' }}
