@@ -37,25 +37,41 @@ export default function DashboardPage() {
     if (!user) return
     
     try {
-      const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
-      const { data: races } = await supabase
-        .from('races')
-        .select('*')
-        .eq('season', 2025)
-        .gte('race_date', threeDaysAgo)
-        .order('race_date', { ascending: true })
-        .limit(1)
+      // Nächstes Rennen aus API laden
+      const apiRes = await fetch('https://api.jolpi.ca/ergast/f1/2025.json')
+      const apiData = await apiRes.json()
+      const allRaces = apiData.MRData?.RaceTable?.Races || []
       
-      if (races?.[0]) {
-        setNextRace(races[0])
-        
-        const { data: preds } = await supabase
-          .from('predictions')
+      // Finde das nächste Rennen (heute oder in der Zukunft)
+      const now = new Date()
+      const upcomingRace = allRaces.find((race: { date: string; time?: string }) => {
+        const raceDate = new Date(`${race.date}T${race.time || '14:00:00Z'}`)
+        // Rennen ist relevant wenn es noch nicht 3 Tage her ist
+        const threeDaysAfter = new Date(raceDate)
+        threeDaysAfter.setDate(threeDaysAfter.getDate() + 3)
+        return now < threeDaysAfter
+      })
+      
+      if (upcomingRace) {
+        // Finde das Rennen in der Datenbank
+        const { data: races } = await supabase
+          .from('races')
           .select('*')
-          .eq('user_id', user.id)
-          .eq('race_id', races[0].id)
+          .eq('season', 2025)
+          .eq('round', parseInt(upcomingRace.round))
+          .limit(1)
         
-        if (preds) setUserPredictions(preds)
+        if (races?.[0]) {
+          setNextRace(races[0])
+          
+          const { data: preds } = await supabase
+            .from('predictions')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('race_id', races[0].id)
+          
+          if (preds) setUserPredictions(preds)
+        }
       }
       
       const { data: profiles } = await supabase

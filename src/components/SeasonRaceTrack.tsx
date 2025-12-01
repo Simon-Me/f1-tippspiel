@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { CAR_ITEMS } from '@/lib/shopItems'
-import { Trophy, X, Medal, Car } from 'lucide-react'
+import { Trophy, Medal, Car } from 'lucide-react'
 import Avatar from './Avatar'
 
 interface PlayerWithCar {
@@ -117,11 +117,12 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
               key={player.id}
               className="relative flex items-center h-16 mb-2 group"
               style={{ paddingLeft: `${position}%` }}
+              onMouseEnter={() => setSelectedPlayer(player)}
+              onMouseLeave={() => setSelectedPlayer(null)}
             >
-              {/* Auto + Tooltip - Klickbar */}
+              {/* Auto */}
               <div 
                 className={`relative flex items-center transition-all cursor-pointer ${isMe ? 'scale-110 z-10' : ''} group-hover:z-20 group-hover:scale-105`}
-                onClick={() => setSelectedPlayer(player)}
               >
                 <img 
                   src={DEFAULT_CAR_TOP}
@@ -132,17 +133,6 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
                     transform: 'rotate(180deg)'
                   }}
                 />
-                {/* Name + Punkte - über dem Auto bei Hover */}
-                <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-1
-                  opacity-0 group-hover:opacity-100 transition-opacity duration-200
-                  bg-zinc-800/95 px-3 py-1.5 rounded-lg shadow-lg border border-zinc-700
-                  whitespace-nowrap pointer-events-none`}>
-                  <span className={`font-semibold ${isMe ? 'text-red-400' : 'text-white'}`}>
-                    {player.username}
-                  </span>
-                  <span className="text-yellow-400 ml-2">{player.total_points} Pkt</span>
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-800/95" />
-                </div>
               </div>
             </div>
           )
@@ -158,88 +148,74 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
         <span>{maxPoints}</span>
       </div>
 
-      {/* Spieler Detail Overlay */}
+      {/* Spieler Detail Popup - schwebt rechts neben der Strecke */}
       {selectedPlayer && (
         <div 
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onClick={() => setSelectedPlayer(null)}
+          className="absolute right-4 top-16 z-50 bg-zinc-900 rounded-2xl border border-zinc-700 w-72 overflow-hidden shadow-2xl pointer-events-none"
         >
-          <div 
-            className="bg-zinc-900 rounded-3xl border border-zinc-700 max-w-md w-full overflow-hidden shadow-2xl"
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Header mit Schließen */}
-            <div className="relative p-6 pb-4 border-b border-zinc-800">
-              <button 
-                onClick={() => setSelectedPlayer(null)}
-                className="absolute top-4 right-4 p-2 rounded-full hover:bg-zinc-800 transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-400" />
-              </button>
-              
-              {/* Profil */}
-              <div className="flex items-center gap-4">
-                <Avatar url={selectedPlayer.avatar_url} username={selectedPlayer.username} size="xl" />
-                <div>
-                  <h3 className="text-2xl font-bold text-white">{selectedPlayer.username}</h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Medal className="w-4 h-4 text-yellow-400" />
-                    <span className="text-gray-400">
-                      Rang #{sortedPlayers.findIndex(p => p.id === selectedPlayer.id) + 1}
-                    </span>
-                  </div>
+          {/* Header */}
+          <div className="p-4 border-b border-zinc-800">
+            <div className="flex items-center gap-3">
+              <Avatar url={selectedPlayer.avatar_url} username={selectedPlayer.username} size="lg" />
+              <div>
+                <h3 className="text-lg font-bold text-white">{selectedPlayer.username}</h3>
+                <div className="flex items-center gap-1.5 text-sm">
+                  <Medal className="w-3.5 h-3.5 text-yellow-400" />
+                  <span className="text-gray-400">
+                    Rang #{sortedPlayers.findIndex(p => p.id === selectedPlayer.id) + 1}
+                  </span>
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Stats */}
-            <div className="p-6 space-y-4">
-              {/* Punkte */}
-              <div className="bg-zinc-800/50 rounded-2xl p-4 flex items-center justify-between">
-                <span className="text-gray-400">Punkte</span>
-                <span className="text-2xl font-bold text-yellow-400">{selectedPlayer.total_points}</span>
+          {/* Stats */}
+          <div className="p-4 space-y-3">
+            {/* Punkte */}
+            <div className="flex items-center justify-between">
+              <span className="text-gray-400 text-sm">Punkte</span>
+              <span className="text-xl font-bold text-yellow-400">{selectedPlayer.total_points}</span>
+            </div>
+
+            {/* Auto */}
+            <div className="bg-zinc-800/50 rounded-xl p-3">
+              <div className="flex items-center gap-2 text-gray-400 text-xs mb-2">
+                <Car className="w-3.5 h-3.5" />
+                <span>Fahrzeug</span>
               </div>
-
-              {/* Auto */}
-              <div className="bg-zinc-800/50 rounded-2xl p-4">
-                <div className="flex items-center gap-2 text-gray-400 mb-3">
-                  <Car className="w-4 h-4" />
-                  <span>Fahrzeug</span>
-                </div>
-                {selectedPlayer.equippedCarImage ? (
-                  <div className="flex items-center gap-4">
-                    <img 
-                      src={selectedPlayer.equippedCarImage} 
-                      alt={selectedPlayer.equippedCarName}
-                      className="h-20 w-auto object-contain rounded-lg"
-                    />
-                    <span className="font-semibold text-white">{selectedPlayer.equippedCarName}</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-4">
-                    <img 
-                      src={DEFAULT_CAR_TOP}
-                      alt="Standard"
-                      className="h-16 w-auto object-contain"
-                      style={{ transform: 'rotate(180deg)' }}
-                    />
-                    <span className="text-gray-500 italic">Kein Auto ausgewählt</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Fortschritt */}
-              <div className="bg-zinc-800/50 rounded-2xl p-4">
-                <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="text-gray-400">WM-Fortschritt</span>
-                  <span className="text-white">{Math.round((selectedPlayer.total_points / maxPoints) * 100)}%</span>
-                </div>
-                <div className="h-3 bg-zinc-700 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-green-500 to-yellow-500 rounded-full transition-all"
-                    style={{ width: `${Math.min((selectedPlayer.total_points / maxPoints) * 100, 100)}%` }}
+              {selectedPlayer.equippedCarImage ? (
+                <div className="flex items-center gap-3">
+                  <img 
+                    src={selectedPlayer.equippedCarImage} 
+                    alt={selectedPlayer.equippedCarName}
+                    className="h-14 w-auto object-contain rounded"
                   />
+                  <span className="font-medium text-white text-sm">{selectedPlayer.equippedCarName}</span>
                 </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <img 
+                    src={DEFAULT_CAR_TOP}
+                    alt="Standard"
+                    className="h-12 w-auto object-contain"
+                    style={{ transform: 'rotate(180deg)' }}
+                  />
+                  <span className="text-gray-500 text-sm italic">Standard</span>
+                </div>
+              )}
+            </div>
+
+            {/* Fortschritt */}
+            <div>
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="text-gray-400">WM-Fortschritt</span>
+                <span className="text-white">{Math.round((selectedPlayer.total_points / maxPoints) * 100)}%</span>
+              </div>
+              <div className="h-2 bg-zinc-700 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-green-500 to-yellow-500 rounded-full"
+                  style={{ width: `${Math.min((selectedPlayer.total_points / maxPoints) * 100, 100)}%` }}
+                />
               </div>
             </div>
           </div>
