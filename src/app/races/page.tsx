@@ -348,9 +348,9 @@ export default function RacesPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-orange-400 text-sm">Bonus-Tipps</div>
-                        <div className="text-xs text-gray-500">Safety Car, Regen, DNF...</div>
+                        <div className="text-xs text-gray-500">Safety Car? Regen?</div>
                       </div>
-                      <span className="text-xs text-orange-400">+63 Pkt</span>
+                      <span className="text-xs text-orange-400">+13 Pkt</span>
                       <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-white transition-colors" />
                     </Link>
                   </div>

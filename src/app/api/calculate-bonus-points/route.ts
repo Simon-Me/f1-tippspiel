@@ -6,15 +6,10 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// Punkte-System für Bonus-Tipps
+// Punkte-System für Bonus-Tipps (vereinfacht)
 const BONUS_POINTS = {
   safety_car: 5,
-  red_flag: 10,
   rain: 8,
-  first_dnf: 15,
-  driver_of_day: 10,
-  most_overtakes: 10,
-  total_dnfs: 5, // ±1 Toleranz
 }
 
 // Punkte-System für Saison-Tipps
@@ -83,36 +78,9 @@ async function calculateBonusPoints(raceId: number) {
       points += BONUS_POINTS.safety_car
     }
 
-    // Red Flag
-    if (pred.red_flag !== null && pred.red_flag === results.had_red_flag) {
-      points += BONUS_POINTS.red_flag
-    }
-
     // Rain
     if (pred.rain_during_race !== null && pred.rain_during_race === results.had_rain) {
       points += BONUS_POINTS.rain
-    }
-
-    // First DNF
-    if (pred.first_dnf_driver && pred.first_dnf_driver === results.first_dnf_driver) {
-      points += BONUS_POINTS.first_dnf
-    }
-
-    // Driver of Day
-    if (pred.driver_of_day && pred.driver_of_day === results.driver_of_day) {
-      points += BONUS_POINTS.driver_of_day
-    }
-
-    // Most Overtakes
-    if (pred.most_overtakes_driver && pred.most_overtakes_driver === results.most_overtakes_driver) {
-      points += BONUS_POINTS.most_overtakes
-    }
-
-    // Total DNFs (±1 Toleranz)
-    if (pred.total_dnfs !== null && results.total_dnfs !== null) {
-      if (Math.abs(pred.total_dnfs - results.total_dnfs) <= 1) {
-        points += BONUS_POINTS.total_dnfs
-      }
     }
 
     // Update prediction mit Punkten

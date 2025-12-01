@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS season_predictions (
 );
 
 -- =====================================================
--- 2. BONUS-TIPPS PRO RENNEN
+-- 2. BONUS-TIPPS PRO RENNEN (vereinfacht)
 -- =====================================================
 CREATE TABLE IF NOT EXISTS bonus_predictions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -42,16 +42,7 @@ CREATE TABLE IF NOT EXISTS bonus_predictions (
   
   -- Ja/Nein Tipps
   safety_car BOOLEAN,             -- Gibt es ein Safety Car?
-  red_flag BOOLEAN,               -- Gibt es eine Rote Flagge?
   rain_during_race BOOLEAN,       -- Regnet es während des Rennens?
-  
-  -- Fahrer-Tipps
-  first_dnf_driver INTEGER,       -- Erster Ausfall
-  driver_of_day INTEGER,          -- Driver of the Day
-  most_overtakes_driver INTEGER,  -- Meiste Überholmanöver
-  
-  -- Zahlen-Tipps
-  total_dnfs INTEGER,             -- Anzahl Ausfälle (0-5+)
   
   points_earned INTEGER DEFAULT 0,
   submitted_at TIMESTAMPTZ DEFAULT NOW(),
@@ -60,7 +51,7 @@ CREATE TABLE IF NOT EXISTS bonus_predictions (
 );
 
 -- =====================================================
--- 3. ERGEBNISSE FÜR BONUS-TIPPS
+-- 3. ERGEBNISSE FÜR BONUS-TIPPS (vereinfacht)
 -- =====================================================
 CREATE TABLE IF NOT EXISTS bonus_results (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -68,16 +59,7 @@ CREATE TABLE IF NOT EXISTS bonus_results (
   
   -- Ja/Nein Ergebnisse
   had_safety_car BOOLEAN,
-  had_red_flag BOOLEAN,
   had_rain BOOLEAN,
-  
-  -- Fahrer Ergebnisse
-  first_dnf_driver INTEGER,
-  driver_of_day INTEGER,
-  most_overtakes_driver INTEGER,
-  
-  -- Zahlen Ergebnisse
-  total_dnfs INTEGER,
   
   recorded_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -167,7 +149,7 @@ CREATE INDEX IF NOT EXISTS idx_bonus_predictions_user ON bonus_predictions(user_
 CREATE INDEX IF NOT EXISTS idx_bonus_predictions_race ON bonus_predictions(race_id);
 
 -- =====================================================
--- PUNKTE-SYSTEM FÜR BONUS-TIPPS:
+-- PUNKTE-SYSTEM:
 -- =====================================================
 -- 
 -- SAISON-TIPPS (einmalig am Saisonende):
@@ -181,16 +163,11 @@ CREATE INDEX IF NOT EXISTS idx_bonus_predictions_race ON bonus_predictions(race_
 --   Most Wins richtig: 40 Punkte
 --   Most Poles richtig: 40 Punkte
 --   Most DNFs richtig: 30 Punkte
---   Rookie of Year: 50 Punkte
 --
--- BONUS-TIPPS PRO RENNEN:
+-- BONUS-TIPPS PRO RENNEN (einfach!):
 --   Safety Car richtig: 5 Punkte
---   Red Flag richtig: 10 Punkte
---   Rain richtig: 8 Punkte
---   First DNF richtig: 15 Punkte
---   Driver of Day richtig: 10 Punkte
---   Most Overtakes richtig: 10 Punkte
---   Total DNFs richtig (±1): 5 Punkte
+--   Regen richtig: 8 Punkte
+--   = Max 13 Punkte pro Rennen
 --
 -- Fertig! 🏎️
 
