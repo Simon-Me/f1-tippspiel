@@ -36,10 +36,12 @@ export default function DashboardPage() {
     if (!loading && !user) router.push('/login')
   }, [user, loading, router])
 
-  // Onboarding Check
+  // Onboarding Check - nur wenn gerade registriert (Flag in sessionStorage)
   useEffect(() => {
-    if (profile && !profile.onboarding_completed) {
+    const justRegistered = sessionStorage.getItem('just_registered')
+    if (justRegistered && profile && !profile.onboarding_completed) {
       setShowOnboarding(true)
+      sessionStorage.removeItem('just_registered')
     }
   }, [profile])
 

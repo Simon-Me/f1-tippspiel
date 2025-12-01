@@ -14,8 +14,7 @@ import {
   Zap,
   Trophy,
   Target,
-  Check,
-  Star
+  Check
 } from 'lucide-react'
 import { format, isPast, isFuture, isToday } from 'date-fns'
 import { de } from 'date-fns/locale'
@@ -335,22 +334,6 @@ export default function RacesPage() {
                       ) : (
                         <span className="text-xs text-red-400">+68 Pkt</span>
                       )}
-                      <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-white transition-colors" />
-                    </Link>
-
-                    {/* Bonus */}
-                    <Link
-                      href={`/races/${race.id}/bonus`}
-                      className="flex items-center gap-3 p-3 bg-[#111] rounded-lg hover:bg-[#1a1a1a] transition-colors group border border-dashed border-orange-900/50"
-                    >
-                      <div className="w-9 h-9 rounded-lg bg-orange-600/20 flex items-center justify-center">
-                        <Star className="w-4 h-4 text-orange-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-orange-400 text-sm">Bonus-Tipps</div>
-                        <div className="text-xs text-gray-500">Safety Car? Regen?</div>
-                      </div>
-                      <span className="text-xs text-orange-400">+13 Pkt</span>
                       <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-white transition-colors" />
                     </Link>
                   </div>

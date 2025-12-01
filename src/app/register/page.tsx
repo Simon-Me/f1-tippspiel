@@ -45,6 +45,8 @@ export default function RegisterPage() {
       setError(error.message || 'Registrierung fehlgeschlagen')
       setLoading(false)
     } else {
+      // Flag setzen damit Onboarding angezeigt wird
+      sessionStorage.setItem('just_registered', 'true')
       setSuccess(true)
       setTimeout(() => {
         router.push('/dashboard')

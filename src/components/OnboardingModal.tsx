@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { 
-  Flag, Trophy, Calendar, Zap, Star, Crown, 
+  Flag, Trophy, Calendar, Crown, 
   ChevronRight, ChevronLeft, Check, Car, Coins, Target
 } from 'lucide-react'
 
@@ -32,19 +32,6 @@ const STEPS = [
       { label: 'Qualifying', desc: 'Tippe die Pole Position', points: '+10 Punkte' },
       { label: 'Sprint', desc: 'Tippe das Podium', points: '+30 Punkte' },
       { label: 'Rennen', desc: 'Podium + Schnellste Runde', points: '+68 Punkte' },
-    ]
-  },
-  {
-    id: 'bonus',
-    title: 'Bonus-Tipps',
-    description: 'Verdiene Extra-Punkte mit Bonus-Vorhersagen für jedes Rennen!',
-    icon: Star,
-    color: 'orange',
-    details: [
-      { label: 'Safety Car?', desc: 'Ja/Nein tippen', points: '+5 Punkte' },
-      { label: 'Rote Flagge?', desc: 'Ja/Nein tippen', points: '+10 Punkte' },
-      { label: 'Regen?', desc: 'Ja/Nein tippen', points: '+8 Punkte' },
-      { label: 'Erster DNF', desc: 'Wer fällt zuerst aus?', points: '+15 Punkte' },
     ]
   },
   {
