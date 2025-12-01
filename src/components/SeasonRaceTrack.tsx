@@ -142,64 +142,64 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
         <span>{maxPoints}</span>
       </div>
 
-      {/* Spieler Detail Popup - schwebt rechts neben der Strecke */}
+      {/* Spieler Detail Popup - zentriert */}
       {selectedPlayer && (
-        <div 
-          className="absolute right-4 top-16 z-50 bg-zinc-900 rounded-2xl border border-zinc-700 w-72 overflow-hidden shadow-2xl pointer-events-none"
-        >
-          {/* Header */}
-          <div className="p-4 border-b border-zinc-800">
-            <div className="flex items-center gap-3">
-              <Avatar url={selectedPlayer.avatar_url} username={selectedPlayer.username} size="lg" />
-              <div>
-                <h3 className="text-lg font-bold text-white">{selectedPlayer.username}</h3>
-                <div className="flex items-center gap-1.5 text-sm">
-                  <Medal className="w-3.5 h-3.5 text-yellow-400" />
-                  <span className="text-gray-400">
-                    Rang #{sortedPlayers.findIndex(p => p.id === selectedPlayer.id) + 1}
-                  </span>
+        <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
+          <div className="bg-zinc-900/95 backdrop-blur-sm rounded-3xl border border-zinc-700 w-96 overflow-hidden shadow-2xl">
+            {/* Header */}
+            <div className="p-6 border-b border-zinc-800">
+              <div className="flex items-center gap-4">
+                <Avatar url={selectedPlayer.avatar_url} username={selectedPlayer.username} size="xl" />
+                <div>
+                  <h3 className="text-2xl font-bold text-white">{selectedPlayer.username}</h3>
+                  <div className="flex items-center gap-2 text-base mt-1">
+                    <Medal className="w-5 h-5 text-yellow-400" />
+                    <span className="text-gray-400">
+                      Rang #{sortedPlayers.findIndex(p => p.id === selectedPlayer.id) + 1}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Stats */}
-          <div className="p-4 space-y-3">
-            {/* Punkte */}
-            <div className="flex items-center justify-between">
-              <span className="text-gray-400 text-sm">Punkte</span>
-              <span className="text-xl font-bold text-yellow-400">{selectedPlayer.total_points}</span>
-            </div>
+            {/* Stats */}
+            <div className="p-6 space-y-4">
+              {/* Punkte */}
+              <div className="flex items-center justify-between bg-zinc-800/50 rounded-xl p-4">
+                <span className="text-gray-400">Punkte</span>
+                <span className="text-3xl font-bold text-yellow-400">{selectedPlayer.total_points}</span>
+              </div>
 
-            {/* Auto */}
-            <div className="bg-zinc-800/50 rounded-xl p-3">
-              <div className="flex items-center gap-2 text-gray-400 text-xs mb-2">
-                <Car className="w-3.5 h-3.5" />
-                <span>Fahrzeug</span>
+              {/* Auto */}
+              <div className="bg-zinc-800/50 rounded-xl p-4">
+                <div className="flex items-center gap-2 text-gray-400 text-sm mb-3">
+                  <Car className="w-4 h-4" />
+                  <span>Fahrzeug</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <img 
+                    src={selectedPlayer.equippedCarImage || '/cars/opelcorsa.webp'} 
+                    alt={selectedPlayer.equippedCarName || 'Standard'}
+                    className="h-24 w-auto object-contain rounded-lg"
+                  />
+                  <span className="font-semibold text-white text-lg">
+                    {selectedPlayer.equippedCarName || <span className="text-gray-500 italic">Kein Auto</span>}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <img 
-                  src={selectedPlayer.equippedCarImage || '/cars/opelcorsa.webp'} 
-                  alt={selectedPlayer.equippedCarName || 'Standard'}
-                  className="h-16 w-auto object-contain rounded"
-                />
-                <span className="font-medium text-white text-sm">
-                  {selectedPlayer.equippedCarName || <span className="text-gray-500 italic">Kein Auto</span>}
-                </span>
-              </div>
-            </div>
 
-            {/* Fortschritt */}
-            <div>
-              <div className="flex items-center justify-between text-xs mb-1">
-                <span className="text-gray-400">WM-Fortschritt</span>
-                <span className="text-white">{Math.round((selectedPlayer.total_points / maxPoints) * 100)}%</span>
-              </div>
-              <div className="h-2 bg-zinc-700 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-green-500 to-yellow-500 rounded-full"
-                  style={{ width: `${Math.min((selectedPlayer.total_points / maxPoints) * 100, 100)}%` }}
-                />
+              {/* Fortschritt */}
+              <div className="bg-zinc-800/50 rounded-xl p-4">
+                <div className="flex items-center justify-between text-sm mb-2">
+                  <span className="text-gray-400">WM-Fortschritt</span>
+                  <span className="text-white font-medium">{Math.round((selectedPlayer.total_points / maxPoints) * 100)}%</span>
+                </div>
+                <div className="h-3 bg-zinc-700 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-green-500 to-yellow-500 rounded-full"
+                    style={{ width: `${Math.min((selectedPlayer.total_points / maxPoints) * 100, 100)}%` }}
+                  />
+                </div>
               </div>
             </div>
           </div>
