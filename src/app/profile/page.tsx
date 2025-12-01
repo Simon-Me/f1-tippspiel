@@ -21,7 +21,9 @@ import {
   Eye,
   Lock,
   Coins,
-  ShoppingBag
+  ShoppingBag,
+  Camera,
+  Loader2
 } from 'lucide-react'
 import { SHOP_ITEMS, RARITY_COLORS, CATEGORY_LABELS } from '@/lib/shopItems'
 import { ShopItem } from '@/lib/supabase'
@@ -63,12 +65,49 @@ export default function ProfilePage() {
   })
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [loadingData, setLoadingData] = useState(true)
+  const [uploading, setUploading] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
 
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login')
     }
   }, [user, loading, router])
+
+  useEffect(() => {
+    if (profile?.avatar_url) {
+      setAvatarUrl(profile.avatar_url)
+    }
+  }, [profile])
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !user) return
+    
+    setUploading(true)
+    
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('userId', user.id)
+      
+      const res = await fetch('/api/upload-avatar', {
+        method: 'POST',
+        body: formData
+      })
+      
+      const data = await res.json()
+      
+      if (data.avatar_url) {
+        setAvatarUrl(data.avatar_url)
+        await refreshProfile()
+      }
+    } catch (error) {
+      console.error('Upload failed:', error)
+    } finally {
+      setUploading(false)
+    }
+  }
 
   useEffect(() => {
     if (!user) return
@@ -319,8 +358,35 @@ export default function ProfilePage() {
         {/* Profile Header */}
         <div className="bg-gradient-to-r from-[#111] to-[#1a1a1a] rounded-2xl p-6 mb-6 border border-gray-800">
           <div className="flex flex-col sm:flex-row items-center gap-6">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center text-4xl font-bold">
-              {profile?.username?.charAt(0).toUpperCase()}
+            {/* Avatar with Upload */}
+            <div className="relative group">
+              {avatarUrl ? (
+                <img 
+                  src={avatarUrl} 
+                  alt={profile?.username || 'Avatar'} 
+                  className="w-24 h-24 rounded-full object-cover border-4 border-red-600"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center text-4xl font-bold border-4 border-red-600">
+                  {profile?.username?.charAt(0).toUpperCase()}
+                </div>
+              )}
+              
+              {/* Upload Overlay */}
+              <label className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                {uploading ? (
+                  <Loader2 className="w-8 h-8 text-white animate-spin" />
+                ) : (
+                  <Camera className="w-8 h-8 text-white" />
+                )}
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleAvatarUpload}
+                  disabled={uploading}
+                  className="hidden"
+                />
+              </label>
             </div>
             <div className="text-center sm:text-left flex-1">
               <h1 className="text-3xl font-bold text-white">{profile?.username}</h1>

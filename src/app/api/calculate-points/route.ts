@@ -286,9 +286,10 @@ export async function POST(request: Request) {
       const oldTotalPoints = profile.total_points || 0
       const pointsDiff = Math.max(0, newTotalPoints - oldTotalPoints)
       
-      // Addiere die neuen Punkte zu den Coins (nicht überschreiben!)
+      // 10 Punkte = 100 Coins (1:10 Multiplikator)
+      const coinsDiff = pointsDiff * 10
       const currentCoins = profile.coins || 0
-      const newCoins = currentCoins + pointsDiff
+      const newCoins = currentCoins + coinsDiff
 
       const { error: updateError } = await supabase
         .from('profiles')

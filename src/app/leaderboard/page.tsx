@@ -7,6 +7,7 @@ import Navbar from '@/components/Navbar'
 import { supabase, Profile, Race } from '@/lib/supabase'
 import { getCountryFlag } from '@/lib/images'
 import { Trophy, Crown, Loader2, Check, X, ExternalLink } from 'lucide-react'
+import Avatar from '@/components/Avatar'
 
 interface Driver {
   driver_number: number
@@ -250,9 +251,13 @@ export default function LeaderboardPage() {
           <div className="flex items-end justify-center gap-4 mb-16 h-64">
             {/* 2. Platz */}
             <div className="flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-b from-gray-300 to-gray-500 flex items-center justify-center text-2xl font-bold text-black mb-2">
-                {players[1]?.username.charAt(0).toUpperCase()}
-              </div>
+              {players[1]?.avatar_url ? (
+                <img src={players[1].avatar_url} alt={players[1].username} className="w-16 h-16 rounded-full object-cover border-4 border-gray-400 mb-2" />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-gradient-to-b from-gray-300 to-gray-500 flex items-center justify-center text-2xl font-bold text-black mb-2">
+                  {players[1]?.username.charAt(0).toUpperCase()}
+                </div>
+              )}
               <p className="font-bold text-gray-300 mb-1">{players[1]?.username}</p>
               <p className="text-2xl font-bold mb-2">{players[1]?.total_points}</p>
               <div className="w-20 h-24 bg-gradient-to-t from-gray-700 to-gray-500 rounded-t-lg flex items-end justify-center pb-3">
@@ -263,9 +268,13 @@ export default function LeaderboardPage() {
             {/* 1. Platz */}
             <div className="flex flex-col items-center -mt-8">
               <Crown className="w-8 h-8 text-yellow-400 mb-1" />
-              <div className="w-20 h-20 rounded-full bg-gradient-to-b from-yellow-400 to-yellow-600 flex items-center justify-center text-3xl font-bold text-black mb-2 ring-4 ring-yellow-400/30">
-                {players[0]?.username.charAt(0).toUpperCase()}
-              </div>
+              {players[0]?.avatar_url ? (
+                <img src={players[0].avatar_url} alt={players[0].username} className="w-20 h-20 rounded-full object-cover border-4 border-yellow-400 mb-2 ring-4 ring-yellow-400/30" />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-gradient-to-b from-yellow-400 to-yellow-600 flex items-center justify-center text-3xl font-bold text-black mb-2 ring-4 ring-yellow-400/30">
+                  {players[0]?.username.charAt(0).toUpperCase()}
+                </div>
+              )}
               <p className="font-bold text-yellow-400 mb-1">{players[0]?.username}</p>
               <p className="text-3xl font-bold mb-2">{players[0]?.total_points}</p>
               <div className="w-24 h-32 bg-gradient-to-t from-yellow-700 to-yellow-500 rounded-t-lg flex items-end justify-center pb-3">
@@ -276,9 +285,13 @@ export default function LeaderboardPage() {
             {/* 3. Platz */}
             {players[2] && (
               <div className="flex flex-col items-center">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-b from-orange-400 to-orange-600 flex items-center justify-center text-xl font-bold text-black mb-2">
-                  {players[2]?.username.charAt(0).toUpperCase()}
-                </div>
+                {players[2]?.avatar_url ? (
+                  <img src={players[2].avatar_url} alt={players[2].username} className="w-14 h-14 rounded-full object-cover border-4 border-orange-500 mb-2" />
+                ) : (
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-b from-orange-400 to-orange-600 flex items-center justify-center text-xl font-bold text-black mb-2">
+                    {players[2]?.username.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <p className="font-bold text-orange-400 mb-1">{players[2]?.username}</p>
                 <p className="text-xl font-bold mb-2">{players[2]?.total_points}</p>
                 <div className="w-16 h-16 bg-gradient-to-t from-orange-800 to-orange-600 rounded-t-lg flex items-end justify-center pb-2">
@@ -310,6 +323,7 @@ export default function LeaderboardPage() {
                     }`}>
                       {idx + 1}
                     </span>
+                    <Avatar url={player.avatar_url} username={player.username} size="sm" />
                     <div>
                       <p className={`flex items-center gap-1 ${isMe ? 'text-red-400 font-medium' : 'text-white font-medium'}`}>
                         {player.username}

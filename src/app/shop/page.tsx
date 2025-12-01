@@ -259,27 +259,20 @@ export default function ShopPage() {
           </h3>
           <div className="space-y-3 text-gray-400 text-sm">
             <p>
-              <span className="text-white font-medium">🎯 Normale Tipps:</span> Für jeden Punkt bekommst du auch einen Coin.
+              <span className="text-white font-medium">🎁 Startguthaben:</span> Jeder bekommt 500 Coins zum Start!
             </p>
             <p>
-              <span className="text-white font-medium">💰 Money Bets:</span> Extra-Wetten mit Quoten bis 5x!
-            </p>
-            <p>
-              <span className="text-white font-medium">🎁 Startguthaben:</span> Neue Spieler erhalten 250 Coins.
+              <span className="text-white font-medium">🎯 Punkte = Coins:</span> Für 10 Punkte bekommst du 100 Coins.
             </p>
           </div>
           <div className="mt-4 flex flex-wrap gap-3 text-sm">
             <div className="bg-zinc-800 px-3 py-2 rounded-lg">
-              <span className="text-gray-500">Race P1 =</span>
-              <span className="text-yellow-400 font-bold ml-1">+25</span>
+              <span className="text-gray-500">Race P1 (25 Pts) =</span>
+              <span className="text-yellow-400 font-bold ml-1">+250 Coins</span>
             </div>
             <div className="bg-zinc-800 px-3 py-2 rounded-lg">
               <span className="text-gray-500">Perfektes Podium =</span>
-              <span className="text-yellow-400 font-bold ml-1">+78</span>
-            </div>
-            <div className="bg-zinc-800 px-3 py-2 rounded-lg">
-              <span className="text-gray-500">Money Bet 2x =</span>
-              <span className="text-green-400 font-bold ml-1">2x Einsatz</span>
+              <span className="text-yellow-400 font-bold ml-1">+780 Coins</span>
             </div>
           </div>
         </div>

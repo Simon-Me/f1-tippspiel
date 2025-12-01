@@ -1,7 +1,8 @@
 import { ShopItem } from './supabase'
 
 // Startguthaben für neue Spieler
-export const STARTING_COINS = 250
+// Bei 10 Punkte = 100 Coins Umrechnung = 500 Coins Startguthaben
+export const STARTING_COINS = 500
 
 export const SHOP_ITEMS: ShopItem[] = [
   // === HELME === (Legendary: 300, Epic: 200, Rare: 120, Common: 50)

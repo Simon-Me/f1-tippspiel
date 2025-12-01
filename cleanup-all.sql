@@ -19,3 +19,4 @@ UNION ALL
 SELECT 'auth.users', COUNT(*) FROM auth.users;
 
 
+

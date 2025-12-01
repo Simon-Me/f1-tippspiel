@@ -37,19 +37,6 @@ export interface UserItem {
   equipped: boolean
 }
 
-export interface Bet {
-  id: string
-  user_id: string
-  race_id: number
-  bet_type: string
-  selection: string
-  amount: number
-  odds: number
-  status: 'pending' | 'won' | 'lost'
-  winnings: number
-  created_at: string
-}
-
 export interface Race {
   id: number
   season: number

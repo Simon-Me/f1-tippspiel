@@ -22,6 +22,28 @@ export default function Navbar() {
   const { user, profile, signOut } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
+  // Avatar Component
+  const Avatar = ({ size = 'sm' }: { size?: 'sm' | 'md' }) => {
+    const sizeClass = size === 'sm' ? 'w-8 h-8' : 'w-10 h-10'
+    const textSize = size === 'sm' ? 'text-sm' : 'text-lg'
+    
+    if (profile?.avatar_url) {
+      return (
+        <img 
+          src={profile.avatar_url} 
+          alt={profile.username} 
+          className={`${sizeClass} rounded-full object-cover border-2 border-[#E10600]`}
+        />
+      )
+    }
+    
+    return (
+      <div className={`${sizeClass} rounded-full bg-gradient-to-br from-[#E10600] to-[#FF6B6B] flex items-center justify-center ${textSize} font-bold`}>
+        {profile?.username?.charAt(0).toUpperCase() || <User className="w-4 h-4" />}
+      </div>
+    )
+  }
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0D0D0D]/95 backdrop-blur-md border-b border-[#2D2D2D]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -61,10 +83,6 @@ export default function Navbar() {
                   <TrendingUp className="w-4 h-4" />
                   WM
                 </Link>
-                <Link href="/bets" className="nav-link flex items-center gap-2 text-green-400 hover:text-green-300">
-                  <Coins className="w-4 h-4" />
-                  Bets
-                </Link>
                 <Link href="/shop" className="nav-link flex items-center gap-2 text-yellow-400 hover:text-yellow-300">
                   <ShoppingBag className="w-4 h-4" />
                   Shop
@@ -73,12 +91,16 @@ export default function Navbar() {
                 {/* User Menu */}
                 <div className="flex items-center gap-4 ml-4 pl-4 border-l border-[#2D2D2D]">
                   <Link href="/profile" className="flex items-center gap-2 hover:text-[#E10600] transition-colors">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#E10600] to-[#FF6B6B] flex items-center justify-center">
-                      <User className="w-4 h-4" />
-                    </div>
+                    <Avatar size="sm" />
                     <span className="font-semibold">{profile?.username || 'User'}</span>
-                    <span className="text-[#E10600] font-bold">{profile?.total_points || 0} Pts</span>
                   </Link>
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className="text-[#E10600] font-bold">{profile?.total_points || 0} Pts</span>
+                    <span className="text-yellow-400 font-bold flex items-center gap-1">
+                      <Coins className="w-3 h-3" />
+                      {profile?.coins || 0}
+                    </span>
+                  </div>
                   <button
                     onClick={() => signOut()}
                     className="text-gray-400 hover:text-[#E10600] transition-colors"
@@ -155,14 +177,6 @@ export default function Navbar() {
                   WM
                 </Link>
                 <Link 
-                  href="/bets" 
-                  className="flex items-center gap-3 py-2 text-green-400 hover:text-green-300"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <Coins className="w-5 h-5" />
-                  Bets
-                </Link>
-                <Link 
                   href="/shop" 
                   className="flex items-center gap-3 py-2 text-yellow-400 hover:text-yellow-300"
                   onClick={() => setMobileMenuOpen(false)}
@@ -171,16 +185,25 @@ export default function Navbar() {
                   Shop
                 </Link>
                 <div className="border-t border-[#2D2D2D] pt-4 mt-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold">{profile?.username}</span>
-                    <span className="text-[#E10600] font-bold">{profile?.total_points || 0} Pts</span>
+                  <div className="flex items-center gap-3 mb-3">
+                    <Avatar size="md" />
+                    <div>
+                      <p className="font-semibold">{profile?.username}</p>
+                      <div className="flex items-center gap-3 text-sm">
+                        <span className="text-[#E10600] font-bold">{profile?.total_points || 0} Pts</span>
+                        <span className="text-yellow-400 flex items-center gap-1">
+                          <Coins className="w-3 h-3" />
+                          {profile?.coins || 0}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                   <button
                     onClick={() => {
                       signOut()
                       setMobileMenuOpen(false)
                     }}
-                    className="flex items-center gap-2 mt-4 text-gray-400 hover:text-[#E10600]"
+                    className="flex items-center gap-2 text-gray-400 hover:text-[#E10600]"
                   >
                     <LogOut className="w-5 h-5" />
                     Ausloggen
@@ -211,4 +234,3 @@ export default function Navbar() {
     </nav>
   )
 }
-
