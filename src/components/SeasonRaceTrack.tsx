@@ -119,7 +119,7 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
                   className={`h-8 w-auto object-contain ${isMe ? 'drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]' : ''}`}
                   style={{ 
                     filter: isMe ? 'none' : 'grayscale(30%) brightness(0.8)',
-                    transform: 'rotate(-90deg)'
+                    transform: 'rotate(180deg)'
                   }}
                 />
                 {/* Name + Punkte */}
