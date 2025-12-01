@@ -487,39 +487,52 @@ export default function LeaderboardPage() {
                       )}
                       
                       {/* Sprint */}
-                      {sprintTip && sessionResults.sprint && (
-                        <div className="text-sm">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-bold px-1.5 py-0.5 bg-purple-900/50 text-purple-400 rounded">S</span>
-                            <span className={sprintTip.points > 0 ? 'text-green-400 font-bold' : 'text-gray-600'}>
-                              {sprintTip.points > 0 ? `+${sprintTip.points}` : '0'}
-                            </span>
+                      {sprintTip && sessionResults.sprint && (() => {
+                        const sprintPodium = [sessionResults.sprint.p1, sessionResults.sprint.p2, sessionResults.sprint.p3]
+                        const getSprintColor = (tipNum: number | undefined, correctNum: number) => {
+                          if (tipNum === correctNum) return 'text-green-400'
+                          if (tipNum && sprintPodium.includes(tipNum)) return 'text-yellow-400'
+                          return 'text-red-400'
+                        }
+                        const getSprintIcon = (tipNum: number | undefined, correctNum: number) => {
+                          if (tipNum === correctNum) return <Check className="w-3 h-3 text-green-400" />
+                          if (tipNum && sprintPodium.includes(tipNum)) return <span className="text-yellow-400">~</span>
+                          return <X className="w-3 h-3 text-red-400" />
+                        }
+                        return (
+                          <div className="text-sm">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs font-bold px-1.5 py-0.5 bg-purple-900/50 text-purple-400 rounded">S</span>
+                              <span className={sprintTip.points > 0 ? 'text-green-400 font-bold' : 'text-gray-600'}>
+                                {sprintTip.points > 0 ? `+${sprintTip.points}` : '0'}
+                              </span>
+                            </div>
+                            <div className="flex gap-4 ml-6">
+                              <div className="flex items-center gap-1">
+                                <span className="text-gray-500">P1:</span>
+                                <span className={getSprintColor(sprintTip.tipP1Num, sessionResults.sprint.p1)}>
+                                  {sprintTip.tipP1}
+                                </span>
+                                {getSprintIcon(sprintTip.tipP1Num, sessionResults.sprint.p1)}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-gray-500">P2:</span>
+                                <span className={getSprintColor(sprintTip.tipP2Num, sessionResults.sprint.p2)}>
+                                  {sprintTip.tipP2}
+                                </span>
+                                {getSprintIcon(sprintTip.tipP2Num, sessionResults.sprint.p2)}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-gray-500">P3:</span>
+                                <span className={getSprintColor(sprintTip.tipP3Num, sessionResults.sprint.p3)}>
+                                  {sprintTip.tipP3}
+                                </span>
+                                {getSprintIcon(sprintTip.tipP3Num, sessionResults.sprint.p3)}
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex gap-4 ml-6">
-                            <div className="flex items-center gap-1">
-                              <span className="text-gray-500">P1:</span>
-                              <span className={sprintTip.tipP1Num === sessionResults.sprint.p1 ? 'text-green-400' : 'text-red-400'}>
-                                {sprintTip.tipP1}
-                              </span>
-                              {sprintTip.tipP1Num === sessionResults.sprint.p1 ? <Check className="w-3 h-3 text-green-400" /> : <X className="w-3 h-3 text-red-400" />}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <span className="text-gray-500">P2:</span>
-                              <span className={sprintTip.tipP2Num === sessionResults.sprint.p2 ? 'text-green-400' : 'text-red-400'}>
-                                {sprintTip.tipP2}
-                              </span>
-                              {sprintTip.tipP2Num === sessionResults.sprint.p2 ? <Check className="w-3 h-3 text-green-400" /> : <X className="w-3 h-3 text-red-400" />}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <span className="text-gray-500">P3:</span>
-                              <span className={sprintTip.tipP3Num === sessionResults.sprint.p3 ? 'text-green-400' : 'text-red-400'}>
-                                {sprintTip.tipP3}
-                              </span>
-                              {sprintTip.tipP3Num === sessionResults.sprint.p3 ? <Check className="w-3 h-3 text-green-400" /> : <X className="w-3 h-3 text-red-400" />}
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                        )
+                      })()}
                       
                       {/* Race */}
                       {raceTip && sessionResults.race && (
@@ -583,14 +596,14 @@ export default function LeaderboardPage() {
             {/* Legende */}
             <div className="mt-6 p-4 bg-zinc-900/50 rounded-xl">
               <p className="text-gray-500 text-xs uppercase tracking-wider mb-3">Punktesystem</p>
-              <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="grid grid-cols-3 gap-2 text-xs">
                 <div className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-green-400" />
                   <span className="text-gray-400">Exakt richtig</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-yellow-400 text-xs">~</span>
-                  <span className="text-gray-400">Auf Podium (5 Pkt)</span>
+                  <span className="text-gray-400">Podium, falsche Pos.</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <X className="w-3 h-3 text-red-400" />
@@ -599,7 +612,9 @@ export default function LeaderboardPage() {
               </div>
               <div className="mt-3 pt-3 border-t border-zinc-800 grid grid-cols-2 gap-1.5 text-xs text-gray-500">
                 <div>Rennen P1/P2/P3: <span className="text-white">25/18/15</span></div>
+                <div>Rennen Podium~: <span className="text-yellow-400">+5 Pkt</span></div>
                 <div>Sprint P1/P2/P3: <span className="text-white">15/10/5</span></div>
+                <div>Sprint Podium~: <span className="text-yellow-400">+3 Pkt</span></div>
                 <div>Quali Pole: <span className="text-white">10 Pkt</span></div>
                 <div>Schnellste Runde: <span className="text-white">10 Pkt</span></div>
                 <div>Perfektes Podium: <span className="text-white">+20 Bonus</span></div>
