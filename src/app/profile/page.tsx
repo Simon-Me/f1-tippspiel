@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import Navbar from '@/components/Navbar'
-import { supabase, Prediction, Race, Driver } from '@/lib/supabase'
+import { supabase, Prediction, Race, Driver, Profile } from '@/lib/supabase'
 import { 
   User, 
   Trophy, 
