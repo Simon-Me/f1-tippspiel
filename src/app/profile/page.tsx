@@ -135,19 +135,30 @@ export default function ProfilePage() {
       
       const data = await res.json()
       
+      // Debug: Zeige alle Logs
+      console.log('=== UPLOAD RESPONSE ===')
+      console.log('Status:', res.status)
+      console.log('Data:', JSON.stringify(data, null, 2))
+      if (data.logs) {
+        console.log('Server Logs:')
+        data.logs.forEach((log: string) => console.log('  ', log))
+      }
+      
       if (!res.ok) {
-        console.error('Server error:', data)
-        throw new Error(data.details || data.error || 'Upload failed')
+        const errorMsg = data.logs ? data.logs.join('\n') : (data.details || data.error)
+        throw new Error(errorMsg)
       }
       
       if (data.avatar_url) {
         setAvatarUrl(data.avatar_url)
         await refreshProfile()
-        alert('Profilbild gespeichert! ✅')
+        alert(`Profilbild gespeichert! ✅\n\nURL: ${data.avatar_url}`)
+      } else {
+        alert('Kein avatar_url zurückgegeben!\n\n' + JSON.stringify(data))
       }
     } catch (error) {
       console.error('Upload failed:', error)
-      alert(`Upload fehlgeschlagen: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}\n\nTipp: Prüfe ob SUPABASE_SERVICE_ROLE_KEY in Vercel gesetzt ist!`)
+      alert(`Upload fehlgeschlagen:\n\n${error instanceof Error ? error.message : 'Unbekannter Fehler'}`)
     } finally {
       setUploading(false)
     }
