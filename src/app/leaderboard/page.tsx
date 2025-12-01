@@ -32,6 +32,7 @@ interface TipDetail {
 interface PlayerTips {
   username: string
   oderId: string
+  avatarUrl?: string
   tips: TipDetail[]
   totalEventPoints: number
 }
@@ -166,6 +167,7 @@ export default function LeaderboardPage() {
             byPlayer[profile.id] = {
               username: profile.username,
               oderId: profile.id,
+              avatarUrl: profile.avatar_url,
               tips: [],
               totalEventPoints: 0
             }
@@ -444,6 +446,7 @@ export default function LeaderboardPage() {
                         }`}>
                           {idx + 1}
                         </span>
+                        <Avatar url={player.avatarUrl} username={player.username} size="sm" />
                         <span className={`font-bold text-lg ${isMe ? 'text-red-400' : 'text-white'}`}>
                           {player.username}
                         </span>

@@ -7,7 +7,6 @@ import Navbar from '@/components/Navbar'
 import { supabase, Profile, ShopItem } from '@/lib/supabase'
 import { SHOP_ITEMS, RARITY_COLORS, CATEGORY_LABELS } from '@/lib/shopItems'
 import { 
-  User, 
   Trophy, 
   Target,
   ArrowLeft,
@@ -15,6 +14,7 @@ import {
   Loader2,
   Coins
 } from 'lucide-react'
+import Avatar from '@/components/Avatar'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 
@@ -120,9 +120,17 @@ export default function PlayerProfilePage() {
         {/* Profile Header */}
         <div className="bg-gradient-to-r from-zinc-900 to-zinc-950 rounded-2xl p-6 mb-6 border border-zinc-800">
           <div className="flex flex-col sm:flex-row items-center gap-6">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center text-4xl font-bold">
-              {player.username?.charAt(0).toUpperCase()}
-            </div>
+            {player.avatar_url ? (
+              <img 
+                src={player.avatar_url} 
+                alt={player.username || 'Avatar'} 
+                className="w-24 h-24 rounded-full object-cover border-4 border-red-600"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center text-4xl font-bold border-4 border-red-600">
+                {player.username?.charAt(0).toUpperCase()}
+              </div>
+            )}
             <div className="text-center sm:text-left flex-1">
               <h1 className="text-3xl font-bold text-white">{player.username}</h1>
               <p className="text-gray-500 mt-1">
@@ -138,8 +146,20 @@ export default function PlayerProfilePage() {
               </div>
             </div>
             <div className="text-center">
-              <div className="text-5xl font-bold text-red-500">{player.total_points || 0}</div>
-              <div className="text-gray-500 text-sm">Punkte</div>
+              <div className="flex items-center gap-3 justify-center">
+                <div>
+                  <div className="text-4xl font-bold text-red-500">{player.total_points || 0}</div>
+                  <div className="text-gray-500 text-xs">Punkte</div>
+                </div>
+                <div className="w-px h-10 bg-zinc-700" />
+                <div>
+                  <div className="text-4xl font-bold text-yellow-400 flex items-center gap-1">
+                    <Coins className="w-5 h-5" />
+                    {player.coins || 0}
+                  </div>
+                  <div className="text-gray-500 text-xs">Coins</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

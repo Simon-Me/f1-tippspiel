@@ -7,7 +7,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import Navbar from '@/components/Navbar'
 import { supabase, Race, Profile, Prediction } from '@/lib/supabase'
 import { getCountryFlag } from '@/lib/images'
-import { Trophy, ChevronRight, Clock, CheckCircle2, Loader2, AlertCircle } from 'lucide-react'
+import { Trophy, ChevronRight, Clock, CheckCircle2, Loader2, AlertCircle, Coins } from 'lucide-react'
+import Avatar from '@/components/Avatar'
 import { differenceInHours, differenceInMinutes, format } from 'date-fns'
 import { de } from 'date-fns/locale'
 
@@ -187,9 +188,18 @@ export default function DashboardPage() {
       
       <main className="pt-24 pb-16 px-6 max-w-2xl mx-auto">
         {/* Begrüßung */}
-        <div className="mb-12">
-          <p className="text-gray-500 text-sm uppercase tracking-wider mb-1">F1 Tippspiel 2025</p>
-          <h1 className="text-4xl font-bold">Hey, {profile?.username} 👋</h1>
+        <div className="mb-12 flex items-center gap-4">
+          <Avatar url={profile?.avatar_url} username={profile?.username} size="xl" />
+          <div>
+            <p className="text-gray-500 text-sm uppercase tracking-wider mb-1">F1 Tippspiel 2025</p>
+            <h1 className="text-4xl font-bold">Hey, {profile?.username} 👋</h1>
+            <div className="flex items-center gap-3 mt-2 text-sm">
+              <span className="text-gray-400">{profile?.total_points || 0} Punkte</span>
+              <span className="text-yellow-400 flex items-center gap-1">
+                <Coins className="w-4 h-4" /> {profile?.coins || 0}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Punkte & Rang */}
@@ -292,12 +302,13 @@ export default function DashboardPage() {
             {allPlayers.slice(0, 5).map((player, idx) => {
               const isMe = player.id === user?.id
               return (
-                <div 
+                <Link 
+                  href={isMe ? '/profile' : `/player/${player.id}`}
                   key={player.id} 
-                  className={`flex items-center justify-between p-4 border-b border-zinc-800 last:border-0 ${isMe ? 'bg-red-950/30' : ''}`}
+                  className={`flex items-center justify-between p-4 border-b border-zinc-800 last:border-0 hover:bg-zinc-800/50 transition-colors ${isMe ? 'bg-red-950/30' : ''}`}
                 >
-                  <div className="flex items-center gap-4">
-                    <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                  <div className="flex items-center gap-3">
+                    <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
                       idx === 0 ? 'bg-yellow-500 text-black' :
                       idx === 1 ? 'bg-gray-400 text-black' :
                       idx === 2 ? 'bg-orange-500 text-black' :
@@ -305,12 +316,13 @@ export default function DashboardPage() {
                     }`}>
                       {idx + 1}
                     </span>
+                    <Avatar url={player.avatar_url} username={player.username} size="sm" />
                     <span className={isMe ? 'text-red-400 font-medium' : 'text-white'}>
                       {player.username}
                     </span>
                   </div>
                   <span className="font-bold">{player.total_points}</span>
-                </div>
+                </Link>
               )
             })}
           </div>
