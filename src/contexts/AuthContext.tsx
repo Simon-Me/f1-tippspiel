@@ -44,7 +44,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .insert({
           id: userId,
           username: newUsername,
-          total_points: 0
+          total_points: 0,
+          coins: 500
         })
         .select()
         .maybeSingle()
@@ -149,7 +150,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .upsert({
             id: data.user.id,
             username: username,
-            total_points: 0
+            total_points: 0,
+            coins: 500
           }, { onConflict: 'id' })
       }
       
