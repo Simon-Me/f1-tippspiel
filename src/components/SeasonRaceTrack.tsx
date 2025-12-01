@@ -177,26 +177,16 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
                 <Car className="w-3.5 h-3.5" />
                 <span>Fahrzeug</span>
               </div>
-              {selectedPlayer.equippedCarImage ? (
-                <div className="flex items-center gap-3">
-                  <img 
-                    src={selectedPlayer.equippedCarImage} 
-                    alt={selectedPlayer.equippedCarName}
-                    className="h-14 w-auto object-contain rounded"
-                  />
-                  <span className="font-medium text-white text-sm">{selectedPlayer.equippedCarName}</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <img 
-                    src={DEFAULT_CAR_TOP}
-                    alt="Standard"
-                    className="h-12 w-auto object-contain"
-                    style={{ transform: 'rotate(180deg)' }}
-                  />
-                  <span className="text-gray-500 text-sm italic">Standard</span>
-                </div>
-              )}
+              <div className="flex items-center gap-3">
+                <img 
+                  src={selectedPlayer.equippedCarImage || '/cars/opelcorsa.webp'} 
+                  alt={selectedPlayer.equippedCarName || 'Standard'}
+                  className="h-16 w-auto object-contain rounded"
+                />
+                <span className="font-medium text-white text-sm">
+                  {selectedPlayer.equippedCarName || <span className="text-gray-500 italic">Kein Auto</span>}
+                </span>
+              </div>
             </div>
 
             {/* Fortschritt */}
