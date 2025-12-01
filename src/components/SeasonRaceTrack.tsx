@@ -81,49 +81,52 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
   const sortedPlayers = [...players].sort((a, b) => b.total_points - a.total_points)
 
   return (
-    <div className="bg-gradient-to-r from-green-950/20 via-zinc-900 to-yellow-950/20 rounded-2xl overflow-hidden border border-zinc-800">
+    <div className="bg-gradient-to-r from-green-950/20 via-zinc-900 to-yellow-950/20 rounded-2xl overflow-hidden border border-zinc-800 w-full max-w-none">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
-        <h3 className="font-bold text-white flex items-center gap-2">
-          <Trophy className="w-4 h-4 text-yellow-400" />
+      <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
+        <h3 className="font-bold text-white flex items-center gap-2 text-lg">
+          <Trophy className="w-5 h-5 text-yellow-400" />
           WM 2025
         </h3>
-        <span className="text-xs text-gray-500">{maxPoints} Pkt</span>
+        <span className="text-sm text-gray-500">{maxPoints} Pkt</span>
       </div>
 
       {/* Strecke */}
-      <div className="relative p-4" style={{ minHeight: `${sortedPlayers.length * 50 + 20}px` }}>
+      <div className="relative px-6 py-6" style={{ minHeight: `${sortedPlayers.length * 70 + 40}px` }}>
         {/* Start/Ziel Linien */}
-        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-green-500/50" />
-        <div className="absolute right-6 top-0 bottom-0 w-1 bg-gradient-to-b from-white via-black to-white"
-             style={{ backgroundSize: '100% 8px' }} />
+        <div className="absolute left-8 top-0 bottom-0 w-1 bg-green-500/50" />
+        <div className="absolute right-8 top-0 bottom-0 w-2 bg-gradient-to-b from-white via-black to-white"
+             style={{ backgroundSize: '100% 10px' }} />
 
         {/* Spieler */}
         {sortedPlayers.map((player, index) => {
           const isMe = player.id === currentUserId
           const position = maxPoints > 0 
-            ? Math.min((player.total_points / maxPoints) * 80 + 8, 88)
-            : 8
+            ? Math.min((player.total_points / maxPoints) * 75 + 10, 85)
+            : 10
           
           return (
             <div
               key={player.id}
-              className="relative flex items-center h-12 mb-1"
+              className="relative flex items-center h-16 mb-2 group"
               style={{ paddingLeft: `${position}%` }}
             >
-              {/* Auto */}
-              <div className={`relative flex items-center gap-1 transition-all ${isMe ? 'scale-110 z-10' : ''}`}>
+              {/* Auto + Tooltip */}
+              <div className={`relative flex items-center transition-all ${isMe ? 'scale-110 z-10' : ''}`}>
                 <img 
                   src={DEFAULT_CAR_TOP}
                   alt=""
-                  className={`h-8 w-auto object-contain ${isMe ? 'drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]' : ''}`}
+                  className={`h-14 md:h-16 w-auto object-contain ${isMe ? 'drop-shadow-[0_0_12px_rgba(239,68,68,0.6)]' : ''}`}
                   style={{ 
                     filter: isMe ? 'none' : 'grayscale(30%) brightness(0.8)',
                     transform: 'rotate(180deg)'
                   }}
                 />
-                {/* Name + Punkte */}
-                <span className={`text-[10px] font-medium whitespace-nowrap ${isMe ? 'text-red-400' : 'text-gray-400'}`}>
+                {/* Name + Punkte - nur bei Hover */}
+                <span className={`absolute left-full ml-2 text-xs font-medium whitespace-nowrap 
+                  opacity-0 group-hover:opacity-100 transition-opacity duration-200
+                  bg-zinc-800/90 px-2 py-1 rounded-md
+                  ${isMe ? 'text-red-400' : 'text-gray-300'}`}>
                   {player.username} <span className="text-gray-500">({player.total_points})</span>
                 </span>
               </div>
@@ -133,9 +136,11 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
       </div>
 
       {/* Skala */}
-      <div className="flex justify-between px-6 pb-2 text-[10px] text-gray-600">
+      <div className="flex justify-between px-8 pb-4 text-xs text-gray-600">
         <span>0</span>
+        <span>{Math.round(maxPoints/4)}</span>
         <span>{Math.round(maxPoints/2)}</span>
+        <span>{Math.round(maxPoints*3/4)}</span>
         <span>{maxPoints}</span>
       </div>
     </div>

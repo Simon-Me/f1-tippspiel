@@ -217,7 +217,7 @@ export default function DashboardPage() {
         </div>
 
         {/* WM Rennstrecke Visualisierung - Volle Breite */}
-        <div className="mb-12 -mx-6 px-2 sm:mx-0 sm:px-0">
+        <div className="mb-12 -mx-4 sm:-mx-6 lg:-mx-12 xl:-mx-24">
           <SeasonRaceTrack currentUserId={user?.id} />
         </div>
 
