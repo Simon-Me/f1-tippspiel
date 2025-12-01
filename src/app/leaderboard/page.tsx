@@ -72,10 +72,19 @@ export default function LeaderboardPage() {
       const driversJson = await driversRes.json()
       const driversList: Driver[] = driversJson.drivers || []
 
+      // Fallback Fahrernamen falls API nicht vollständig
+      const DRIVER_NAMES: Record<number, string> = {
+        1: 'Verstappen', 4: 'Norris', 16: 'Leclerc', 81: 'Piastri', 55: 'Sainz',
+        63: 'Russell', 44: 'Hamilton', 14: 'Alonso', 18: 'Stroll', 27: 'Hülkenberg',
+        12: 'Antonelli', 10: 'Gasly', 22: 'Tsunoda', 31: 'Ocon', 23: 'Albon',
+        77: 'Bottas', 24: 'Zhou', 20: 'Magnussen', 30: 'Lawson', 6: 'Hadjar',
+        87: 'Bearman', 7: 'Doohan', 43: 'Colapinto', 5: 'Bortoleto'
+      }
+      
       const getDriverName = (num: number | null | undefined): string => {
         if (!num) return '-'
         const d = driversList.find(d => d.driver_number === num)
-        return d?.full_name?.split(' ').pop() || '-'
+        return d?.full_name?.split(' ').pop() || DRIVER_NAMES[num] || '-'
       }
       
       const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()

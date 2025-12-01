@@ -78,7 +78,7 @@ export async function GET() {
   try {
     // Hole Fahrer vom letzten Rennen (enthält Team-Zuordnung)
     const response = await fetch(`${JOLPICA_API}/current/last/results/`, {
-      next: { revalidate: 3600 } // Cache für 1 Stunde
+      next: { revalidate: 300 } // Cache für 5 Minuten
     })
     
     if (!response.ok) {
