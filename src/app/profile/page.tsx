@@ -66,6 +66,7 @@ export default function ProfilePage() {
   const [loadingData, setLoadingData] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [championTip, setChampionTip] = useState<number | null>(null)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -196,6 +197,18 @@ export default function ProfilePage() {
             .map(ui => CAR_ITEMS.find(item => item.id === ui.item_id))
             .filter((item): item is CarItem => item !== undefined)
           setOwnedCars(owned)
+        }
+
+        // Weltmeister-Tipp laden
+        const { data: seasonTip } = await supabase
+          .from('season_predictions')
+          .select('wdc_p1_driver')
+          .eq('user_id', userId)
+          .eq('season', 2025)
+          .maybeSingle()
+        
+        if (seasonTip?.wdc_p1_driver) {
+          setChampionTip(seasonTip.wdc_p1_driver)
         }
 
         // Alle Spieler für Ranking
@@ -492,6 +505,33 @@ export default function ProfilePage() {
             <div className="text-2xl font-bold text-white">{stats.tipsWithPoints}</div>
             <div className="text-xs text-gray-500">Treffer</div>
           </div>
+        </div>
+
+        {/* Weltmeister-Tipp */}
+        <div className="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 rounded-xl p-4 border border-yellow-800/50 mb-6">
+          <div className="text-xs text-yellow-500 mb-2 flex items-center gap-2">
+            <Crown className="w-4 h-4" />
+            DEIN WELTMEISTER-TIPP 2025
+          </div>
+          {championTip ? (
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xl font-bold text-white">{getDriverName(championTip)}</div>
+                <div className="text-sm text-yellow-400/70">+100 Punkte wenn richtig!</div>
+              </div>
+              <div className="text-4xl">🏆</div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-lg text-gray-400">Noch nicht getippt</div>
+                <div className="text-sm text-yellow-400/70">Tippe vor dem ersten Rennen!</div>
+              </div>
+              <Link href="/season-tips" className="px-4 py-2 bg-yellow-600 text-black font-bold rounded-lg hover:bg-yellow-500 text-sm">
+                Jetzt tippen
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Favorite Driver */}

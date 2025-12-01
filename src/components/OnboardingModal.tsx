@@ -36,14 +36,12 @@ const STEPS = [
   },
   {
     id: 'season',
-    title: 'Saison-Tipps',
-    description: 'Tippe vor dem ersten Rennen wer Weltmeister wird – bis zu 430 Bonus-Punkte!',
+    title: 'Weltmeister-Tipp',
+    description: 'Tippe vor dem ersten Rennen wer Weltmeister wird!',
     icon: Crown,
     color: 'yellow',
     details: [
-      { label: 'Fahrer-WM', desc: 'Top 3 der Saison', points: '+180 Punkte' },
-      { label: 'Konstrukteurs-WM', desc: 'Top 3 Teams', points: '+140 Punkte' },
-      { label: 'Bonus', desc: 'Most Wins, Most Poles...', points: '+110 Punkte' },
+      { label: 'Weltmeister', desc: 'Wer holt den Titel?', points: '+100 Punkte' },
     ]
   },
   {
