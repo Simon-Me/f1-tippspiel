@@ -24,7 +24,11 @@ interface SeasonRaceTrackProps {
 const DEFAULT_CAR_TOP = '/cars/top/opelcorsa.png'
 
 // Verfügbare Top-View Bilder
-const AVAILABLE_TOP_VIEWS = ['bratwurst', 'fiat', 'jeep', 'jokoklaas', 'opelcorsa', 'prosieben', 'redbull']
+const AVAILABLE_TOP_VIEWS = [
+  'bratwurst', 'ferrari', 'fiat', 'funnyfrisch', 'gold', 
+  'jeep', 'jokoklaas', 'lasagne', 'mcdonalds', 'opelcorsa', 
+  'prosieben', 'redbull'
+]
 
 // Hole das Top-View Bild für ein Auto (falls vorhanden)
 function getCarTopView(carId?: string): string {
