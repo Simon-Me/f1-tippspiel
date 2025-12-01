@@ -9,6 +9,7 @@ import { supabase, Race, Profile, Prediction } from '@/lib/supabase'
 import { getCountryFlag } from '@/lib/images'
 import { Trophy, ChevronRight, Clock, CheckCircle2, Loader2, AlertCircle, Coins } from 'lucide-react'
 import Avatar from '@/components/Avatar'
+import SeasonRaceTrack from '@/components/SeasonRaceTrack'
 import { differenceInHours, differenceInMinutes, format } from 'date-fns'
 import { de } from 'date-fns/locale'
 
@@ -203,7 +204,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Punkte & Rang */}
-        <div className="grid grid-cols-2 gap-4 mb-12">
+        <div className="grid grid-cols-2 gap-4 mb-8">
           <div className="bg-zinc-900 rounded-2xl p-6">
             <p className="text-gray-500 text-sm mb-1">Deine Punkte</p>
             <p className="text-5xl font-bold text-white">{profile?.total_points || 0}</p>
@@ -213,6 +214,11 @@ export default function DashboardPage() {
             <p className="text-5xl font-bold text-white">#{userRank || '-'}</p>
             <p className="text-gray-600 text-sm">von {allPlayers.length}</p>
           </div>
+        </div>
+
+        {/* WM Rennstrecke Visualisierung */}
+        <div className="mb-12">
+          <SeasonRaceTrack currentUserId={user?.id} />
         </div>
 
         {/* Status */}
