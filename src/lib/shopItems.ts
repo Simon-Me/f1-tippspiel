@@ -20,7 +20,7 @@ export const CAR_ITEMS: CarItem[] = [
     description: 'Das hässlichste Auto. Jetzt in schnell und hässlich.',
     price: 100,
     rarity: 'common',
-    image: '/cars/multipla.webp'
+    image: '/cars/multipla.png'
   },
   {
     id: 'bratwurst',
@@ -79,7 +79,7 @@ export const CAR_ITEMS: CarItem[] = [
     image: '/cars/prosieben.webp'
   },
   
-  // === RARE (600-1200 Coins) - Mit etwas Tippen erreichbar ===
+  // === RARE (600-800 Coins) - Mit etwas Tippen erreichbar ===
   {
     id: 'jokoklaas',
     name: 'Joko & Klaas F1',
@@ -89,78 +89,12 @@ export const CAR_ITEMS: CarItem[] = [
     image: '/cars/jokoklaas.webp'
   },
   {
-    id: 'clubmate',
-    name: 'Club-Mate Racer',
-    description: 'Koffein-Power für die Nachtrennen.',
-    price: 700,
-    rarity: 'rare',
-    image: '/cars/clubmate.webp'
-  },
-  {
     id: 'mcdonalds',
     name: "McDonald's F1",
     description: "I'm lovin' it. Mit Extra Speed.",
     price: 800,
     rarity: 'rare',
     image: '/cars/mcdonalds.webp'
-  },
-  {
-    id: 'cocacola',
-    name: 'Coca-Cola Racing',
-    description: 'Erfrischend schnell. Taste the Speed.',
-    price: 900,
-    rarity: 'rare',
-    image: '/cars/cocacola.webp'
-  },
-  {
-    id: 'haas',
-    name: 'Haas VF-24',
-    description: 'Das amerikanische Team. Made in USA.',
-    price: 1000,
-    rarity: 'rare',
-    image: '/cars/haas.webp'
-  },
-  {
-    id: 'williams',
-    name: 'Williams FW46',
-    description: 'Die Legende kehrt zurück. 9x Weltmeister-Team.',
-    price: 1200,
-    rarity: 'rare',
-    image: '/cars/williams.webp'
-  },
-  
-  // === EPIC (1500-2500 Coins) - Für gute Tipper ===
-  {
-    id: 'nike',
-    name: 'Nike Speed',
-    description: 'Just Do It. Auf 350 km/h.',
-    price: 1500,
-    rarity: 'epic',
-    image: '/cars/nike.webp'
-  },
-  {
-    id: 'moncler',
-    name: 'Moncler Racing',
-    description: 'Luxus auf der Strecke. Für die Stylischen.',
-    price: 1800,
-    rarity: 'epic',
-    image: '/cars/moncler.webp'
-  },
-  {
-    id: 'audi',
-    name: 'Audi F1',
-    description: 'Die Zukunft. Ab 2026 in der Formel 1.',
-    price: 2000,
-    rarity: 'epic',
-    image: '/cars/audi.webp'
-  },
-  {
-    id: 'mercedes',
-    name: 'Mercedes W15',
-    description: 'Der Silberpfeil. 8x Konstrukteurs-Weltmeister.',
-    price: 2500,
-    rarity: 'epic',
-    image: '/cars/mercedes.webp'
   },
   
   // === LEGENDARY (3000-5000 Coins) - Nur für Top-Tipper ===
