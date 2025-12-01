@@ -106,8 +106,7 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
              style={{ backgroundSize: '100% 10px' }} />
 
         {/* Spieler */}
-        {sortedPlayers.map((player, index) => {
-          const isMe = player.id === currentUserId
+        {sortedPlayers.map((player) => {
           const position = maxPoints > 0 
             ? Math.min((player.total_points / maxPoints) * 75 + 10, 85)
             : 10
@@ -121,17 +120,12 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
               onMouseLeave={() => setSelectedPlayer(null)}
             >
               {/* Auto */}
-              <div 
-                className={`relative flex items-center transition-all cursor-pointer ${isMe ? 'scale-110 z-10' : ''} group-hover:z-20 group-hover:scale-105`}
-              >
+              <div className="relative flex items-center transition-all cursor-pointer group-hover:z-20 group-hover:scale-105">
                 <img 
                   src={DEFAULT_CAR_TOP}
                   alt=""
-                  className={`h-14 md:h-16 w-auto object-contain ${isMe ? 'drop-shadow-[0_0_12px_rgba(239,68,68,0.6)]' : ''}`}
-                  style={{ 
-                    filter: isMe ? 'none' : 'grayscale(30%) brightness(0.8)',
-                    transform: 'rotate(180deg)'
-                  }}
+                  className="h-14 md:h-16 w-auto object-contain"
+                  style={{ transform: 'rotate(180deg)' }}
                 />
               </div>
             </div>
