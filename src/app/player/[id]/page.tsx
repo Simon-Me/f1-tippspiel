@@ -12,7 +12,8 @@ import {
   ArrowLeft,
   ShoppingBag,
   Loader2,
-  Coins
+  Coins,
+  User
 } from 'lucide-react'
 import Avatar from '@/components/Avatar'
 import ShopItemIcon from '@/components/ShopItemIcon'
