@@ -1,8 +1,9 @@
 -- F1 Tippspiel Shop System - Datenbank Setup
 -- Führe dieses Script im Supabase SQL Editor aus
 
--- 1. Füge coins Spalte zu profiles hinzu (falls nicht vorhanden)
+-- 1. Füge coins und avatar_url Spalten zu profiles hinzu
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS coins INTEGER DEFAULT 500;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 
 -- 2. Setze Startguthaben für alle User
 -- Bei 10 Punkte = 100 Coins - also bestehende Punkte * 10 + 500 Startguthaben
