@@ -23,7 +23,8 @@ import {
   Coins,
   ShoppingBag,
   Camera,
-  Loader2
+  Loader2,
+  Check
 } from 'lucide-react'
 import { CAR_ITEMS, RARITY_COLORS, CarItem } from '@/lib/shopItems'
 import { format } from 'date-fns'
@@ -67,6 +68,7 @@ export default function ProfilePage() {
   const [uploading, setUploading] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [championTip, setChampionTip] = useState<number | null>(null)
+  const [equippedCarId, setEquippedCarId] = useState<string>('default')
 
   useEffect(() => {
     if (!loading && !user) {
@@ -177,14 +179,17 @@ export default function ProfilePage() {
           console.error('Error loading drivers from API:', e)
         }
 
-        // Coins laden
-        const { data: profileCoins } = await supabase
+        // Coins und equipped car laden
+        const { data: profileData } = await supabase
           .from('profiles')
-          .select('coins')
+          .select('coins, equipped_car_id')
           .eq('id', userId)
           .single()
         
-        if (profileCoins) setCoins(profileCoins.coins || 0)
+        if (profileData) {
+          setCoins(profileData.coins || 0)
+          setEquippedCarId(profileData.equipped_car_id || 'default')
+        }
 
         // Gekaufte Autos laden
         const { data: userItems } = await supabase
@@ -620,16 +625,76 @@ export default function ProfilePage() {
             </Link>
           </div>
 
-          {ownedCars.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4">
+          <div className="p-4">
+            {/* Aktuelles Auto */}
+            <div className="mb-4 p-4 bg-gradient-to-r from-green-900/30 to-emerald-900/30 rounded-xl border border-green-800/50">
+              <div className="text-xs text-green-400 mb-2">AUSGEWÄHLTES AUTO</div>
+              <div className="flex items-center gap-4">
+                <img 
+                  src={equippedCarId === 'default' ? '/cars/default.webp' : (ownedCars.find(c => c.id === equippedCarId)?.image || '/cars/default.webp')}
+                  alt="Ausgewähltes Auto"
+                  className="w-24 h-16 object-contain bg-zinc-900 rounded-lg"
+                />
+                <div>
+                  <div className="font-bold text-white">
+                    {equippedCarId === 'default' ? 'Standard-Wagen' : (ownedCars.find(c => c.id === equippedCarId)?.name || 'Standard-Wagen')}
+                  </div>
+                  <div className="text-xs text-gray-400">Wird auf der Rennstrecke angezeigt</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Alle Autos zum Auswählen */}
+            <div className="text-xs text-gray-500 mb-2">WÄHLE DEIN AUTO</div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {/* Default Wagen */}
+              <button
+                onClick={async () => {
+                  if (!user) return
+                  await supabase.from('profiles').update({ equipped_car_id: 'default' }).eq('id', user.id)
+                  setEquippedCarId('default')
+                }}
+                className={`relative rounded-xl border-2 bg-black/50 overflow-hidden transition-all ${
+                  equippedCarId === 'default' ? 'border-green-500 ring-2 ring-green-500/30' : 'border-gray-700 hover:border-gray-500'
+                }`}
+              >
+                {equippedCarId === 'default' && (
+                  <div className="absolute top-2 right-2 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                    <Check className="w-3 h-3 text-white" />
+                  </div>
+                )}
+                <img 
+                  src="/cars/default.webp"
+                  alt="Standard-Wagen"
+                  className="w-full aspect-video object-contain bg-zinc-900"
+                />
+                <div className="p-2">
+                  <div className="text-xs font-bold text-white truncate">Standard-Wagen</div>
+                  <div className="text-[10px] text-gray-500">Kostenlos</div>
+                </div>
+              </button>
+
+              {/* Gekaufte Autos */}
               {ownedCars.map(car => {
                 const rarityStyle = RARITY_COLORS[car.rarity]
+                const isEquipped = equippedCarId === car.id
                 return (
-                  <div 
+                  <button
                     key={car.id}
-                    className={`relative rounded-xl border ${rarityStyle.border} bg-black/50 overflow-hidden`}
-                    title={car.description}
+                    onClick={async () => {
+                      if (!user) return
+                      await supabase.from('profiles').update({ equipped_car_id: car.id }).eq('id', user.id)
+                      setEquippedCarId(car.id)
+                    }}
+                    className={`relative rounded-xl border-2 bg-black/50 overflow-hidden transition-all ${
+                      isEquipped ? 'border-green-500 ring-2 ring-green-500/30' : `${rarityStyle.border} hover:opacity-80`
+                    }`}
                   >
+                    {isEquipped && (
+                      <div className="absolute top-2 right-2 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center z-10">
+                        <Check className="w-3 h-3 text-white" />
+                      </div>
+                    )}
                     <img 
                       src={car.image} 
                       alt={car.name}
@@ -639,19 +704,17 @@ export default function ProfilePage() {
                       <div className="text-xs font-bold text-white truncate">{car.name}</div>
                       <div className={`text-[10px] ${rarityStyle.text} uppercase`}>{car.rarity}</div>
                     </div>
-                  </div>
+                  </button>
                 )
               })}
             </div>
-          ) : (
-            <div className="p-8 text-center">
-              <span className="text-5xl block mb-3">🏎️</span>
-              <p className="text-gray-500">Du hast noch keine Autos</p>
-              <Link href="/shop" className="inline-block mt-4 px-4 py-2 bg-yellow-600 text-black font-bold rounded-lg hover:bg-yellow-500">
-                Zur Garage
-              </Link>
-            </div>
-          )}
+
+            {ownedCars.length === 0 && (
+              <p className="text-center text-gray-500 text-sm mt-4">
+                Kaufe Autos im <Link href="/shop" className="text-yellow-500 hover:underline">Shop</Link> um mehr Auswahl zu haben!
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Recent Predictions */}
