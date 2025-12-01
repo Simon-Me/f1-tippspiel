@@ -80,7 +80,7 @@ export default function ProfilePage() {
     }
   }, [profile])
 
-  const compressImage = (file: File, maxWidth = 400, quality = 0.8): Promise<Blob> => {
+  const compressImage = (file: File, maxSize = 200): Promise<Blob> => {
     return new Promise((resolve, reject) => {
       const img = new Image()
       img.onload = () => {
@@ -88,21 +88,22 @@ export default function ProfilePage() {
         let width = img.width
         let height = img.height
         
-        if (width > maxWidth) {
-          height = (height * maxWidth) / width
-          width = maxWidth
-        }
+        // Quadratisch zuschneiden (kleinere Seite)
+        const size = Math.min(width, height)
+        const sx = (width - size) / 2
+        const sy = (height - size) / 2
         
-        canvas.width = width
-        canvas.height = height
+        canvas.width = maxSize
+        canvas.height = maxSize
         
         const ctx = canvas.getContext('2d')
-        ctx?.drawImage(img, 0, 0, width, height)
+        // Zeichne quadratischen Ausschnitt
+        ctx?.drawImage(img, sx, sy, size, size, 0, 0, maxSize, maxSize)
         
         canvas.toBlob(
           (blob) => blob ? resolve(blob) : reject('Failed to compress'),
           'image/jpeg',
-          quality
+          0.7 // 70% Qualität für kleinere Dateien
         )
       }
       img.onerror = reject
@@ -117,8 +118,10 @@ export default function ProfilePage() {
     setUploading(true)
     
     try {
-      // Komprimiere das Bild auf max 400px und 80% Qualität
-      const compressedBlob = await compressImage(file, 400, 0.8)
+      // Komprimiere auf 200x200px quadratisch, 70% Qualität
+      const compressedBlob = await compressImage(file, 200)
+      
+      console.log('Compressed size:', compressedBlob.size, 'bytes') // Debug
       
       const formData = new FormData()
       formData.append('file', new File([compressedBlob], 'avatar.jpg', { type: 'image/jpeg' }))
@@ -129,11 +132,12 @@ export default function ProfilePage() {
         body: formData
       })
       
-      if (!res.ok) {
-        throw new Error(`Upload failed: ${res.status}`)
-      }
-      
       const data = await res.json()
+      
+      if (!res.ok) {
+        console.error('Server error:', data)
+        throw new Error(data.details || data.error || 'Upload failed')
+      }
       
       if (data.avatar_url) {
         setAvatarUrl(data.avatar_url)
@@ -141,7 +145,7 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error('Upload failed:', error)
-      alert('Bild konnte nicht hochgeladen werden. Bitte versuche ein kleineres Bild.')
+      alert(`Upload fehlgeschlagen: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`)
     } finally {
       setUploading(false)
     }
