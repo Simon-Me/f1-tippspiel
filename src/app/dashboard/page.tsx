@@ -174,57 +174,33 @@ export default function DashboardPage() {
     return () => clearInterval(i)
   }, [nextSessionTime])
 
-  // Auto-Berechnung
+  // Auto-Berechnung bei JEDEM Seitenbesuch
   useEffect(() => {
-    if (!nextRace) return
-    
-    const raceRound = nextRace.round
+    if (!user) return
     
     async function autoCalc() {
-      const lastCalc = localStorage.getItem(`calc_${raceRound}`)
-      if (lastCalc && Date.now() - parseInt(lastCalc) < 300000) return // 5 min cache
-      
-      setCalcStatus('checking')
+      setCalcStatus('calculating')
       
       try {
-        // Check ob Ergebnisse da sind
-        const [qualiRes, sprintRes, raceRes] = await Promise.all([
-          fetch(`https://api.jolpi.ca/ergast/f1/2025/${raceRound}/qualifying/`),
-          fetch(`https://api.jolpi.ca/ergast/f1/2025/${raceRound}/sprint/`),
-          fetch(`https://api.jolpi.ca/ergast/f1/2025/${raceRound}/results/`)
-        ])
+        // Berechne ALLE ausstehenden Rennen
+        const calcRes = await fetch('/api/calculate-points')
+        const calcData = await calcRes.json()
         
-        const [qualiData, sprintData, raceData] = await Promise.all([
-          qualiRes.json(), sprintRes.json(), raceRes.json()
-        ])
+        console.log('[Auto-Calc]', calcData)
         
-        const hasResults = 
-          qualiData.MRData?.RaceTable?.Races?.[0]?.QualifyingResults?.length > 0 ||
-          sprintData.MRData?.RaceTable?.Races?.[0]?.SprintResults?.length > 0 ||
-          raceData.MRData?.RaceTable?.Races?.[0]?.Results?.length > 0
-        
-        if (hasResults) {
-          setCalcStatus('calculating')
-          const calcRes = await fetch('/api/calculate-points', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionType: 'all' })
-          })
-          const calcData = await calcRes.json()
-          
-          if (calcData.success) {
-            localStorage.setItem(`calc_${raceRound}`, Date.now().toString())
-            await fetchData()
-            await refreshProfile()
-          }
+        if (calcData.success) {
+          await fetchData()
+          await refreshProfile()
         }
-      } catch (e) { console.error(e) }
+      } catch (e) { 
+        console.error('[Auto-Calc] Error:', e) 
+      }
       
       setCalcStatus('done')
     }
     
     autoCalc()
-  }, [nextRace, fetchData, refreshProfile])
+  }, [user, fetchData, refreshProfile])
 
   if (loading || loadingData) {
     return <div className="min-h-screen bg-black flex items-center justify-center">
