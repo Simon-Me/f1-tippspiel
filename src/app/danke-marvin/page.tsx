@@ -127,16 +127,7 @@ export default function DankeMarvinPage() {
                 height={400}
                 className="mx-auto drop-shadow-2xl"
                 style={{ filter: 'drop-shadow(0 0 30px rgba(255, 215, 0, 0.3))' }}
-                onError={(e) => {
-                  // Fallback wenn kein Bild vorhanden
-                  (e.target as HTMLImageElement).style.display = 'none'
-                }}
               />
-              
-              {/* Fallback Icon wenn kein Bild */}
-              <div className="text-center">
-                <Trophy className="w-32 h-32 mx-auto text-yellow-500 mb-4" />
-              </div>
               
               {/* Plakette */}
               <div className="mt-6 bg-gradient-to-r from-yellow-600 via-yellow-500 to-yellow-600 rounded-lg p-4 text-center">
