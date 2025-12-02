@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// Verwende Service Role Key für volle DB-Rechte (falls vorhanden)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -9,23 +8,19 @@ const supabase = createClient(
 
 // Points system
 const POINTS = {
-  // Race
   RACE_P1: 25,
   RACE_P2: 18,
   RACE_P3: 15,
   RACE_ON_PODIUM: 5,
   RACE_FASTEST_LAP: 10,
   RACE_PERFECT_BONUS: 20,
-  // Sprint
   SPRINT_P1: 15,
   SPRINT_P2: 10,
   SPRINT_P3: 5,
-  SPRINT_ON_PODIUM: 3, // Bonus wenn Fahrer aufs Podium kam, aber falsche Position
-  // Qualifying
+  SPRINT_ON_PODIUM: 3,
   QUALI_POLE: 10,
 }
 
-// Verstappen fährt #1 als Weltmeister, aber die API gibt manchmal #33 zurück
 const DRIVER_NUMBER_MAP: Record<string, number> = {
   'VER': 1, 'NOR': 4, 'LEC': 16, 'PIA': 81, 'SAI': 55,
   'RUS': 63, 'HAM': 44, 'ALO': 14, 'STR': 18, 'HUL': 27,
@@ -35,334 +30,255 @@ const DRIVER_NUMBER_MAP: Record<string, number> = {
 }
 
 function getDriverNumber(code: string, permanentNumber?: string): number {
-  // Immer zuerst unsere Map verwenden (für korrekte Nummern wie VER=1)
   if (DRIVER_NUMBER_MAP[code]) return DRIVER_NUMBER_MAP[code]
   return parseInt(permanentNumber || '0')
 }
 
-// GET für einfachen Browser-Aufruf
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const round = searchParams.get('round')
-  
-  // Erstelle einen Fake-Request für POST
-  const fakeRequest = {
-    json: async () => ({ round: round ? parseInt(round) : undefined, sessionType: 'all' })
-  } as Request
-  
-  return POST(fakeRequest)
+// Berechne Punkte für ein einzelnes Rennen
+async function calculateRacePoints(raceRound: number, dbRaceId: string) {
+  const results: {
+    qualifying?: { pole: string | null, calculated: boolean }
+    sprint?: { p1: string | null, p2: string | null, p3: string | null, calculated: boolean }
+    race?: { p1: string | null, p2: string | null, p3: string | null, fl: string | null, calculated: boolean }
+  } = {}
+
+  // === QUALIFYING ===
+  try {
+    const qualiRes = await fetch(`https://api.jolpi.ca/ergast/f1/2025/${raceRound}/qualifying/`)
+    const qualiData = await qualiRes.json()
+    const qualiResults = qualiData.MRData?.RaceTable?.Races?.[0]?.QualifyingResults
+
+    if (qualiResults?.length > 0) {
+      const pole = qualiResults[0]
+      const poleNum = getDriverNumber(pole.Driver.code, pole.Driver.permanentNumber)
+
+      const { data: predictions } = await supabase
+        .from('predictions')
+        .select('*')
+        .eq('race_id', dbRaceId)
+        .eq('session_type', 'qualifying')
+
+      for (const pred of predictions || []) {
+        const points = pred.pole_driver === poleNum ? POINTS.QUALI_POLE : 0
+        await supabase.from('predictions').update({ points_earned: points }).eq('id', pred.id)
+      }
+
+      results.qualifying = { pole: pole.Driver.code, calculated: true }
+    }
+  } catch (e) { console.error('Quali error:', e) }
+
+  // === SPRINT ===
+  try {
+    const sprintRes = await fetch(`https://api.jolpi.ca/ergast/f1/2025/${raceRound}/sprint/`)
+    const sprintData = await sprintRes.json()
+    const sprintResults = sprintData.MRData?.RaceTable?.Races?.[0]?.SprintResults
+
+    if (sprintResults?.length > 0) {
+      const p1 = sprintResults.find((r: { position: string }) => r.position === '1')
+      const p2 = sprintResults.find((r: { position: string }) => r.position === '2')
+      const p3 = sprintResults.find((r: { position: string }) => r.position === '3')
+
+      const p1Num = p1 ? getDriverNumber(p1.Driver.code, p1.Driver.permanentNumber) : null
+      const p2Num = p2 ? getDriverNumber(p2.Driver.code, p2.Driver.permanentNumber) : null
+      const p3Num = p3 ? getDriverNumber(p3.Driver.code, p3.Driver.permanentNumber) : null
+      const sprintPodium = [p1Num, p2Num, p3Num].filter(n => n !== null)
+
+      const { data: predictions } = await supabase
+        .from('predictions')
+        .select('*')
+        .eq('race_id', dbRaceId)
+        .eq('session_type', 'sprint')
+
+      for (const pred of predictions || []) {
+        let points = 0
+        
+        if (pred.p1_driver === p1Num) points += POINTS.SPRINT_P1
+        else if (pred.p1_driver && sprintPodium.includes(pred.p1_driver)) points += POINTS.SPRINT_ON_PODIUM
+        
+        if (pred.p2_driver === p2Num) points += POINTS.SPRINT_P2
+        else if (pred.p2_driver && sprintPodium.includes(pred.p2_driver)) points += POINTS.SPRINT_ON_PODIUM
+        
+        if (pred.p3_driver === p3Num) points += POINTS.SPRINT_P3
+        else if (pred.p3_driver && sprintPodium.includes(pred.p3_driver)) points += POINTS.SPRINT_ON_PODIUM
+
+        await supabase.from('predictions').update({ points_earned: points }).eq('id', pred.id)
+      }
+
+      results.sprint = { p1: p1?.Driver.code, p2: p2?.Driver.code, p3: p3?.Driver.code, calculated: true }
+    }
+  } catch (e) { console.error('Sprint error:', e) }
+
+  // === RACE ===
+  try {
+    const raceRes = await fetch(`https://api.jolpi.ca/ergast/f1/2025/${raceRound}/results/`)
+    const raceData = await raceRes.json()
+    const raceResults = raceData.MRData?.RaceTable?.Races?.[0]?.Results
+
+    if (raceResults?.length > 0) {
+      const p1 = raceResults.find((r: { position: string }) => r.position === '1')
+      const p2 = raceResults.find((r: { position: string }) => r.position === '2')
+      const p3 = raceResults.find((r: { position: string }) => r.position === '3')
+      const fl = raceResults.find((r: { FastestLap?: { rank: string } }) => r.FastestLap?.rank === '1')
+
+      const p1Num = p1 ? getDriverNumber(p1.Driver.code, p1.Driver.permanentNumber) : null
+      const p2Num = p2 ? getDriverNumber(p2.Driver.code, p2.Driver.permanentNumber) : null
+      const p3Num = p3 ? getDriverNumber(p3.Driver.code, p3.Driver.permanentNumber) : null
+      const flNum = fl ? getDriverNumber(fl.Driver.code, fl.Driver.permanentNumber) : null
+      const podium = [p1Num, p2Num, p3Num].filter(n => n !== null)
+
+      const { data: predictions } = await supabase
+        .from('predictions')
+        .select('*')
+        .eq('race_id', dbRaceId)
+        .eq('session_type', 'race')
+
+      for (const pred of predictions || []) {
+        let points = 0
+
+        if (pred.p1_driver === p1Num) points += POINTS.RACE_P1
+        else if (pred.p1_driver && podium.includes(pred.p1_driver)) points += POINTS.RACE_ON_PODIUM
+
+        if (pred.p2_driver === p2Num) points += POINTS.RACE_P2
+        else if (pred.p2_driver && podium.includes(pred.p2_driver)) points += POINTS.RACE_ON_PODIUM
+
+        if (pred.p3_driver === p3Num) points += POINTS.RACE_P3
+        else if (pred.p3_driver && podium.includes(pred.p3_driver)) points += POINTS.RACE_ON_PODIUM
+
+        if (pred.p1_driver === p1Num && pred.p2_driver === p2Num && pred.p3_driver === p3Num) {
+          points += POINTS.RACE_PERFECT_BONUS
+        }
+
+        if (pred.fastest_lap_driver === flNum) points += POINTS.RACE_FASTEST_LAP
+
+        await supabase.from('predictions').update({ points_earned: points }).eq('id', pred.id)
+      }
+
+      results.race = { p1: p1?.Driver.code, p2: p2?.Driver.code, p3: p3?.Driver.code, fl: fl?.Driver.code, calculated: true }
+    }
+  } catch (e) { console.error('Race error:', e) }
+
+  return results
 }
 
-export async function POST(request: Request) {
-  try {
-    const body = await request.json().catch(() => ({}))
-    const { sessionType = 'all', round } = body
+// Update alle Benutzer-Gesamtpunkte
+async function updateAllProfiles() {
+  const { data: allProfiles } = await supabase.from('profiles').select('id, coins, total_points')
+  
+  let updated = 0
+  for (const profile of allProfiles || []) {
+    const { data: userPreds } = await supabase
+      .from('predictions')
+      .select('points_earned')
+      .eq('user_id', profile.id)
 
-    // Bestimme welche Runde berechnet werden soll
-    let raceRound = round
+    const newTotalPoints = userPreds?.reduce((sum, p) => sum + (p.points_earned || 0), 0) || 0
+    const predCount = userPreds?.length || 0
     
-    if (!raceRound) {
-      // Suche aktuelles/letztes Rennen in der DB (letzte 3 Tage)
-      const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
-      const { data: currentRace } = await supabase
-        .from('races')
-        .select('round')
-        .eq('season', 2025)
-        .gte('race_date', threeDaysAgo)
-        .order('race_date', { ascending: true })
-        .limit(1)
-        .maybeSingle()
-      
-      if (currentRace) {
-        raceRound = currentRace.round
-      } else {
-        // Fallback: Hole letzte Runde aus API
-        const lastRes = await fetch('https://api.jolpi.ca/ergast/f1/current/last/results/')
-        const lastData = await lastRes.json()
-        raceRound = parseInt(lastData.MRData?.RaceTable?.Races?.[0]?.round || '0')
-      }
-    }
+    const oldTotalPoints = profile.total_points || 0
+    const pointsDiff = Math.max(0, newTotalPoints - oldTotalPoints)
+    const coinsDiff = pointsDiff * 10
+    const newCoins = (profile.coins || 0) + coinsDiff
 
-    if (!raceRound) {
-      return NextResponse.json({ error: 'Could not determine race round' }, { status: 400 })
-    }
+    const { error } = await supabase
+      .from('profiles')
+      .update({ total_points: newTotalPoints, predictions_count: predCount, coins: newCoins })
+      .eq('id', profile.id)
     
-    console.log('Calculating points for round:', raceRound)
+    if (!error) updated++
+  }
+  
+  return updated
+}
 
-    const results: {
-      qualifying?: { pole: string | null, points: number[] }
-      sprint?: { p1: string | null, p2: string | null, p3: string | null, points: number[] }
-      race?: { p1: string | null, p2: string | null, p3: string | null, fl: string | null, points: number[] }
-    } = {}
-
-    // Finde Rennen in DB
-    const { data: dbRace, error: dbError } = await supabase
+// HAUPT-ROUTE: Automatisch alle unberechneten Rennen finden und berechnen
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const forceRound = searchParams.get('round')
+  
+  // Wenn eine spezifische Runde angegeben, nur diese berechnen
+  if (forceRound) {
+    const round = parseInt(forceRound)
+    const { data: dbRace } = await supabase
       .from('races')
       .select('id, race_name')
       .eq('season', 2025)
-      .eq('round', raceRound)
+      .eq('round', round)
       .maybeSingle()
-
-    console.log('Looking for race round:', raceRound, 'Found:', dbRace, 'Error:', dbError)
-
-    if (!dbRace) {
-      return NextResponse.json({ 
-        error: 'Race not found in database', 
-        round: raceRound,
-        dbError: dbError?.message 
-      }, { status: 404 })
-    }
-
-    // === QUALIFYING ===
-    if (sessionType === 'all' || sessionType === 'qualifying') {
-      try {
-        const qualiRes = await fetch(`https://api.jolpi.ca/ergast/f1/2025/${raceRound}/qualifying/`)
-        const qualiData = await qualiRes.json()
-        const qualiResults = qualiData.MRData?.RaceTable?.Races?.[0]?.QualifyingResults
-
-        if (qualiResults && qualiResults.length > 0) {
-          const pole = qualiResults[0]
-          const poleNum = getDriverNumber(pole.Driver.code, pole.Driver.permanentNumber)
-
-          // Hole alle Qualifying Predictions
-          const { data: predictions } = await supabase
-            .from('predictions')
-            .select('*')
-            .eq('race_id', dbRace.id)
-            .eq('session_type', 'qualifying')
-
-          const pointsAwarded: number[] = []
-
-          for (const pred of predictions || []) {
-            let points = 0
-            if (pred.pole_driver === poleNum) {
-              points = POINTS.QUALI_POLE
-            }
-            pointsAwarded.push(points)
-
-            await supabase
-              .from('predictions')
-              .update({ points_earned: points })
-              .eq('id', pred.id)
-          }
-
-          results.qualifying = { pole: pole.Driver.code, points: pointsAwarded }
-        }
-      } catch (e) {
-        console.error('Qualifying error:', e)
-      }
-    }
-
-    // === SPRINT ===
-    if (sessionType === 'all' || sessionType === 'sprint') {
-      try {
-        const sprintRes = await fetch(`https://api.jolpi.ca/ergast/f1/2025/${raceRound}/sprint/`)
-        const sprintData = await sprintRes.json()
-        const sprintResults = sprintData.MRData?.RaceTable?.Races?.[0]?.SprintResults
-
-        if (sprintResults && sprintResults.length > 0) {
-          const p1 = sprintResults.find((r: { position: string }) => r.position === '1')
-          const p2 = sprintResults.find((r: { position: string }) => r.position === '2')
-          const p3 = sprintResults.find((r: { position: string }) => r.position === '3')
-
-          const p1Num = p1 ? getDriverNumber(p1.Driver.code, p1.Driver.permanentNumber) : null
-          const p2Num = p2 ? getDriverNumber(p2.Driver.code, p2.Driver.permanentNumber) : null
-          const p3Num = p3 ? getDriverNumber(p3.Driver.code, p3.Driver.permanentNumber) : null
-
-          // Hole alle Sprint Predictions
-          const { data: predictions } = await supabase
-            .from('predictions')
-            .select('*')
-            .eq('race_id', dbRace.id)
-            .eq('session_type', 'sprint')
-
-          const pointsAwarded: number[] = []
-          const sprintPodium = [p1Num, p2Num, p3Num].filter(n => n !== null)
-
-          for (const pred of predictions || []) {
-            let points = 0
-            
-            // P1
-            if (pred.p1_driver === p1Num) {
-              points += POINTS.SPRINT_P1
-            } else if (pred.p1_driver && sprintPodium.includes(pred.p1_driver)) {
-              points += POINTS.SPRINT_ON_PODIUM
-            }
-            
-            // P2
-            if (pred.p2_driver === p2Num) {
-              points += POINTS.SPRINT_P2
-            } else if (pred.p2_driver && sprintPodium.includes(pred.p2_driver)) {
-              points += POINTS.SPRINT_ON_PODIUM
-            }
-            
-            // P3
-            if (pred.p3_driver === p3Num) {
-              points += POINTS.SPRINT_P3
-            } else if (pred.p3_driver && sprintPodium.includes(pred.p3_driver)) {
-              points += POINTS.SPRINT_ON_PODIUM
-            }
-            
-            pointsAwarded.push(points)
-
-            await supabase
-              .from('predictions')
-              .update({ points_earned: points })
-              .eq('id', pred.id)
-          }
-
-          results.sprint = {
-            p1: p1?.Driver.code || null,
-            p2: p2?.Driver.code || null,
-            p3: p3?.Driver.code || null,
-            points: pointsAwarded
-          }
-        }
-      } catch (e) {
-        console.error('Sprint error:', e)
-      }
-    }
-
-    // === RACE ===
-    if (sessionType === 'all' || sessionType === 'race') {
-      try {
-        const raceRes = await fetch(`https://api.jolpi.ca/ergast/f1/2025/${raceRound}/results/`)
-        const raceData = await raceRes.json()
-        const raceResults = raceData.MRData?.RaceTable?.Races?.[0]?.Results
-
-        if (raceResults && raceResults.length > 0) {
-          const p1 = raceResults.find((r: { position: string }) => r.position === '1')
-          const p2 = raceResults.find((r: { position: string }) => r.position === '2')
-          const p3 = raceResults.find((r: { position: string }) => r.position === '3')
-          const fl = raceResults.find((r: { FastestLap?: { rank: string } }) => r.FastestLap?.rank === '1')
-
-          const p1Num = p1 ? getDriverNumber(p1.Driver.code, p1.Driver.permanentNumber) : null
-          const p2Num = p2 ? getDriverNumber(p2.Driver.code, p2.Driver.permanentNumber) : null
-          const p3Num = p3 ? getDriverNumber(p3.Driver.code, p3.Driver.permanentNumber) : null
-          const flNum = fl ? getDriverNumber(fl.Driver.code, fl.Driver.permanentNumber) : null
-          const podium = [p1Num, p2Num, p3Num].filter(n => n !== null)
-
-          // Hole alle Race Predictions
-          const { data: predictions } = await supabase
-            .from('predictions')
-            .select('*')
-            .eq('race_id', dbRace.id)
-            .eq('session_type', 'race')
-
-          const pointsAwarded: number[] = []
-
-          for (const pred of predictions || []) {
-            let points = 0
-
-            // P1
-            if (pred.p1_driver === p1Num) {
-              points += POINTS.RACE_P1
-            } else if (pred.p1_driver && podium.includes(pred.p1_driver)) {
-              points += POINTS.RACE_ON_PODIUM
-            }
-
-            // P2
-            if (pred.p2_driver === p2Num) {
-              points += POINTS.RACE_P2
-            } else if (pred.p2_driver && podium.includes(pred.p2_driver)) {
-              points += POINTS.RACE_ON_PODIUM
-            }
-
-            // P3
-            if (pred.p3_driver === p3Num) {
-              points += POINTS.RACE_P3
-            } else if (pred.p3_driver && podium.includes(pred.p3_driver)) {
-              points += POINTS.RACE_ON_PODIUM
-            }
-
-            // Perfect Podium Bonus
-            if (pred.p1_driver === p1Num && pred.p2_driver === p2Num && pred.p3_driver === p3Num) {
-              points += POINTS.RACE_PERFECT_BONUS
-            }
-
-            // Fastest Lap
-            if (pred.fastest_lap_driver === flNum) {
-              points += POINTS.RACE_FASTEST_LAP
-            }
-
-            pointsAwarded.push(points)
-
-            await supabase
-              .from('predictions')
-              .update({ points_earned: points })
-              .eq('id', pred.id)
-          }
-
-          results.race = {
-            p1: p1?.Driver.code || null,
-            p2: p2?.Driver.code || null,
-            p3: p3?.Driver.code || null,
-            fl: fl?.Driver.code || null,
-            points: pointsAwarded
-          }
-        }
-      } catch (e) {
-        console.error('Race error:', e)
-      }
-    }
-
-    // Update alle User Gesamtpunkte UND Coins
-    const { data: allProfiles } = await supabase.from('profiles').select('id, coins, total_points')
     
-    let updatedProfiles = 0
-    for (const profile of allProfiles || []) {
-      const { data: userPreds } = await supabase
-        .from('predictions')
-        .select('points_earned')
-        .eq('user_id', profile.id)
-
-      const newTotalPoints = userPreds?.reduce((sum, p) => sum + (p.points_earned || 0), 0) || 0
-      const predCount = userPreds?.length || 0
-      
-      // Berechne wie viele neue Punkte dazugekommen sind
-      const oldTotalPoints = profile.total_points || 0
-      const pointsDiff = Math.max(0, newTotalPoints - oldTotalPoints)
-      
-      // 10 Punkte = 100 Coins (1:10 Multiplikator)
-      const coinsDiff = pointsDiff * 10
-      const currentCoins = profile.coins || 0
-      const newCoins = currentCoins + coinsDiff
-
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({
-          total_points: newTotalPoints,
-          predictions_count: predCount,
-          coins: newCoins
-        })
-        .eq('id', profile.id)
-      
-      if (!updateError) updatedProfiles++
+    if (!dbRace) {
+      return NextResponse.json({ error: 'Race not found', round }, { status: 404 })
     }
-
-    // Markiere Rennen als finished
-    await supabase
-      .from('races')
-      .update({ status: 'finished' })
-      .eq('id', dbRace.id)
-
-    console.log('Points calculated:', {
-      round: raceRound,
+    
+    const results = await calculateRacePoints(round, dbRace.id)
+    
+    if (results.race?.calculated) {
+      await supabase.from('races').update({ status: 'finished' }).eq('id', dbRace.id)
+    }
+    
+    const profilesUpdated = await updateAllProfiles()
+    
+    return NextResponse.json({ 
+      success: true, 
+      mode: 'single',
+      round, 
       raceName: dbRace.race_name,
-      profilesUpdated: updatedProfiles,
-      results
+      results,
+      profilesUpdated
     })
-
-    return NextResponse.json({
-      success: true,
-      round: raceRound,
-      raceName: dbRace.race_name,
-      profilesUpdated: updatedProfiles,
-      results
-    })
-
-  } catch (error) {
-    console.error('Points calculation error:', error)
-    return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
+  
+  // AUTOMATISCHER MODUS: Finde alle Rennen die noch nicht "finished" sind
+  const today = new Date().toISOString().split('T')[0]
+  
+  const { data: pendingRaces } = await supabase
+    .from('races')
+    .select('id, round, race_name, race_date, status')
+    .eq('season', 2025)
+    .lte('race_date', today) // Nur Rennen in der Vergangenheit
+    .or('status.is.null,status.neq.finished')
+    .order('round', { ascending: true })
+  
+  console.log(`[Auto-Calc] Found ${pendingRaces?.length || 0} pending races`)
+  
+  if (!pendingRaces || pendingRaces.length === 0) {
+    return NextResponse.json({ 
+      success: true, 
+      mode: 'auto',
+      message: 'No pending races to calculate',
+      timestamp: new Date().toISOString()
+    })
+  }
+  
+  const calculated: { round: number, name: string, results: object }[] = []
+  
+  for (const race of pendingRaces) {
+    console.log(`[Auto-Calc] Processing Round ${race.round}: ${race.race_name}`)
+    
+    const results = await calculateRacePoints(race.round, race.id)
+    
+    // Wenn das Rennen berechnet wurde, markiere als finished
+    if (results.race?.calculated) {
+      await supabase.from('races').update({ status: 'finished' }).eq('id', race.id)
+      calculated.push({ round: race.round, name: race.race_name, results })
+      console.log(`[Auto-Calc] ✓ Round ${race.round} finished`)
+    }
+  }
+  
+  // Update alle Profile einmal am Ende
+  const profilesUpdated = await updateAllProfiles()
+  
+  return NextResponse.json({
+    success: true,
+    mode: 'auto',
+    timestamp: new Date().toISOString(),
+    pendingChecked: pendingRaces.length,
+    calculated: calculated.length,
+    races: calculated,
+    profilesUpdated
+  })
+}
+
+export async function POST(request: Request) {
+  // POST verhält sich wie GET ohne Parameter
+  return GET(request)
 }
