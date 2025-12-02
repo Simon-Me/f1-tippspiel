@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import Navbar from '@/components/Navbar'
 import { supabase, Race, Profile, Prediction } from '@/lib/supabase'
 import { getCountryFlag } from '@/lib/images'
-import { Trophy, ChevronRight, Clock, CheckCircle2, Loader2, AlertCircle, Coins } from 'lucide-react'
+import { ChevronRight, Clock, CheckCircle2, Loader2, AlertCircle, Coins } from 'lucide-react'
 import Avatar from '@/components/Avatar'
 import SeasonRaceTrack from '@/components/SeasonRaceTrack'
 import OnboardingModal from '@/components/OnboardingModal'
@@ -31,6 +31,10 @@ export default function DashboardPage() {
   
   // Onboarding
   const [showOnboarding, setShowOnboarding] = useState(false)
+  
+  // Refs um doppelte Aufrufe zu verhindern
+  const hasLoadedData = useRef(false)
+  const hasCalcedPoints = useRef(false)
 
   useEffect(() => {
     if (!loading && !user) router.push('/login')
@@ -45,77 +49,73 @@ export default function DashboardPage() {
     }
   }, [profile])
 
-  // Daten laden
-  const fetchData = useCallback(async () => {
-    if (!user) return
+  // Daten laden - NUR EINMAL
+  useEffect(() => {
+    if (!user || hasLoadedData.current) return
+    hasLoadedData.current = true
     
-    try {
-      // Nächstes Rennen aus API laden
-      const apiRes = await fetch('https://api.jolpi.ca/ergast/f1/2025.json', { cache: 'no-store' })
-      const apiData = await apiRes.json()
-      const allRaces = apiData.MRData?.RaceTable?.Races || []
-      
-      console.log('[Dashboard] Alle Rennen aus API:', allRaces.length)
-      
-      // Finde das nächste Rennen (erstes in der Zukunft)
-      const now = new Date()
-      let upcomingRace = null
-      
-      for (const race of allRaces) {
-        const raceDate = new Date(`${race.date}T${race.time || '14:00:00Z'}`)
+    const userId = user.id // Speichern für async Closure
+    
+    async function fetchData() {
+      try {
+        // Nächstes Rennen aus PROXY API laden (vermeidet CORS)
+        const apiRes = await fetch('/api/races-calendar')
+        const apiData = await apiRes.json()
+        const allRaces = apiData.MRData?.RaceTable?.Races || []
         
-        // Rennen ist kommend wenn es in der Zukunft liegt
-        if (raceDate > now) {
-          upcomingRace = race
-          console.log('[Dashboard] Nächstes Rennen gefunden:', race.raceName, 'Round:', race.round, 'Date:', race.date)
-          break
+        console.log('[Dashboard] Alle Rennen aus API:', allRaces.length)
+        
+        // Finde das nächste Rennen (erstes in der Zukunft)
+        const now = new Date()
+        let upcomingRace = null
+        
+        for (const race of allRaces) {
+          const raceDate = new Date(`${race.date}T${race.time || '14:00:00Z'}`)
+          if (raceDate > now) {
+            upcomingRace = race
+            console.log('[Dashboard] Nächstes Rennen gefunden:', race.raceName, 'Round:', race.round)
+            break
+          }
         }
-      }
-      
-      if (upcomingRace) {
-        // Finde das Rennen in der Datenbank
-        const { data: races } = await supabase
-          .from('races')
-          .select('*')
-          .eq('season', 2025)
-          .eq('round', parseInt(upcomingRace.round))
-          .limit(1)
         
-        console.log('[Dashboard] Rennen aus DB:', races?.[0]?.race_name || 'nicht gefunden')
-        
-        if (races?.[0]) {
-          setNextRace(races[0])
-          
-          const { data: preds } = await supabase
-            .from('predictions')
+        if (upcomingRace) {
+          const { data: races } = await supabase
+            .from('races')
             .select('*')
-            .eq('user_id', user.id)
-            .eq('race_id', races[0].id)
+            .eq('season', 2025)
+            .eq('round', parseInt(upcomingRace.round))
+            .limit(1)
           
-          if (preds) setUserPredictions(preds)
-        } else {
-          console.log('[Dashboard] Rennen nicht in DB gefunden, Round:', upcomingRace.round)
+          if (races?.[0]) {
+            setNextRace(races[0])
+            
+            const { data: preds } = await supabase
+              .from('predictions')
+              .select('*')
+              .eq('user_id', userId)
+              .eq('race_id', races[0].id)
+            
+            if (preds) setUserPredictions(preds)
+          }
         }
-      } else {
-        console.log('[Dashboard] Kein kommendes Rennen gefunden')
+        
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('*')
+          .order('total_points', { ascending: false })
+        
+        if (profiles) setAllPlayers(profiles)
+      } catch (e) {
+        console.error('[Dashboard] Fehler:', e)
+      } finally {
+        setLoadingData(false)
       }
-      
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('total_points', { ascending: false })
-      
-      if (profiles) setAllPlayers(profiles)
-    } catch (e) {
-      console.error('[Dashboard] Fehler:', e)
-    } finally {
-      setLoadingData(false)
     }
+    
+    fetchData()
   }, [user])
 
-  useEffect(() => { fetchData() }, [fetchData])
-
-  // Session-Zeiten holen
+  // Session-Zeiten holen - via Proxy
   useEffect(() => {
     if (!nextRace) return
     
@@ -123,13 +123,13 @@ export default function DashboardPage() {
     
     async function getSessionTimes() {
       try {
-        const res = await fetch(`https://api.jolpi.ca/ergast/f1/2025/${raceRound}.json`)
+        const res = await fetch(`/api/race-details/${raceRound}`)
         const data = await res.json()
         const race = data.MRData?.RaceTable?.Races?.[0]
         if (!race) return
         
         const now = new Date()
-        const sessions = []
+        const sessions: { name: string; date: Date }[] = []
         
         if (race.Qualifying) sessions.push({ name: 'Qualifying', date: new Date(`${race.Qualifying.date}T${race.Qualifying.time}`) })
         if (race.Sprint) sessions.push({ name: 'Sprint', date: new Date(`${race.Sprint.date}T${race.Sprint.time}`) })
@@ -174,23 +174,31 @@ export default function DashboardPage() {
     return () => clearInterval(i)
   }, [nextSessionTime])
 
-  // Auto-Berechnung bei JEDEM Seitenbesuch
+  // Auto-Berechnung bei JEDEM Seitenbesuch - NUR EINMAL
   useEffect(() => {
-    if (!user) return
+    if (!user || hasCalcedPoints.current) return
+    hasCalcedPoints.current = true
     
     async function autoCalc() {
       setCalcStatus('calculating')
       
       try {
-        // Berechne ALLE ausstehenden Rennen
         const calcRes = await fetch('/api/calculate-points')
         const calcData = await calcRes.json()
         
         console.log('[Auto-Calc]', calcData)
         
-        if (calcData.success) {
-          await fetchData()
+        if (calcData.success && calcData.results?.length > 0) {
+          // Nur Profile neu laden wenn wirklich was berechnet wurde
           await refreshProfile()
+          
+          // Players neu laden
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('*')
+            .order('total_points', { ascending: false })
+          
+          if (profiles) setAllPlayers(profiles)
         }
       } catch (e) { 
         console.error('[Auto-Calc] Error:', e) 
@@ -200,7 +208,7 @@ export default function DashboardPage() {
     }
     
     autoCalc()
-  }, [user, fetchData, refreshProfile])
+  }, [user, refreshProfile])
 
   if (loading || loadingData) {
     return <div className="min-h-screen bg-black flex items-center justify-center">

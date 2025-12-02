@@ -87,13 +87,13 @@ export default function LeaderboardPage() {
         return d?.full_name?.split(' ').pop() || DRIVER_NAMES[num] || '-'
       }
       
-      const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+      // Finde das letzte abgeschlossene Rennen (mit Ergebnissen)
       const { data: races } = await supabase
         .from('races')
         .select('*')
         .eq('season', 2025)
-        .gte('race_date', threeDaysAgo)
-        .order('race_date', { ascending: true })
+        .eq('status', 'finished')
+        .order('race_date', { ascending: false })
         .limit(1)
       
       if (races?.[0] && profilesData) {
@@ -112,21 +112,17 @@ export default function LeaderboardPage() {
         const getNum = (code: string) => DRIVER_MAP[code] || 0
 
         try {
-          const [qualiRes, sprintRes, raceRes] = await Promise.all([
-            fetch(`https://api.jolpi.ca/ergast/f1/2025/${raceRound}/qualifying/`),
-            fetch(`https://api.jolpi.ca/ergast/f1/2025/${raceRound}/sprint/`),
-            fetch(`https://api.jolpi.ca/ergast/f1/2025/${raceRound}/results/`)
-          ])
-
-          const qualiData = await qualiRes.json()
-          const qualiResults = qualiData.MRData?.RaceTable?.Races?.[0]?.QualifyingResults
+          // Nutze Proxy-API um CORS zu vermeiden
+          const resultsRes = await fetch(`/api/race-results/${raceRound}`)
+          const resultsData = await resultsRes.json()
+          
+          const qualiResults = resultsData.qualifying
           if (qualiResults?.[0]) {
             const poleNum = getNum(qualiResults[0].Driver.code)
             results.qualifying = { pole: poleNum, poleName: getDriverName(poleNum) }
           }
 
-          const sprintData = await sprintRes.json()
-          const sprintResults = sprintData.MRData?.RaceTable?.Races?.[0]?.SprintResults
+          const sprintResults = resultsData.sprint
           if (sprintResults?.length > 0) {
             const sp1 = sprintResults.find((r: { position: string }) => r.position === '1')
             const sp2 = sprintResults.find((r: { position: string }) => r.position === '2')
@@ -140,8 +136,7 @@ export default function LeaderboardPage() {
             }
           }
 
-          const raceData = await raceRes.json()
-          const raceResults = raceData.MRData?.RaceTable?.Races?.[0]?.Results
+          const raceResults = resultsData.race
           if (raceResults?.length > 0) {
             const rp1 = raceResults.find((r: { position: string }) => r.position === '1')
             const rp2 = raceResults.find((r: { position: string }) => r.position === '2')
