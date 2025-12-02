@@ -349,3 +349,22 @@ body {
     font-size: 1.5rem;
   }
 }
+
+/* Road Animation - Autos fahren */
+@keyframes road-move {
+  0% { background-position: 0 0; }
+  100% { background-position: -200px 0; }
+}
+
+@keyframes speed-lines-move {
+  0% { background-position: 0 0; }
+  100% { background-position: -400px 0; }
+}
+
+.animate-road {
+  animation: road-move 2s linear infinite;
+}
+
+.animate-speed-lines {
+  animation: speed-lines-move 0.8s linear infinite;
+}

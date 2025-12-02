@@ -113,12 +113,44 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
         <span className="text-sm text-gray-500">{maxPoints} Pkt</span>
       </div>
 
-      {/* Strecke */}
-      <div className="relative px-4 md:px-8 py-4 md:py-6" style={{ minHeight: `${sortedPlayers.length * 60 + 40}px` }}>
-        {/* Start/Ziel Linien */}
-        <div className="absolute left-4 md:left-10 top-0 bottom-0 w-0.5 md:w-1 bg-green-500/50" />
-        <div className="absolute right-4 md:right-10 top-0 bottom-0 w-1 md:w-2 bg-gradient-to-b from-white via-black to-white"
-             style={{ backgroundSize: '100% 8px' }} />
+      {/* Strecke mit Animation */}
+      <div 
+        className="relative px-4 md:px-8 py-4 md:py-6 overflow-hidden" 
+        style={{ minHeight: `${sortedPlayers.length * 60 + 40}px` }}
+      >
+        {/* Animierter Asphalt-Hintergrund */}
+        <div className="absolute inset-0 overflow-hidden">
+          {/* Straßenmarkierungen die sich bewegen */}
+          <div 
+            className="absolute inset-0 animate-road"
+            style={{
+              backgroundImage: `repeating-linear-gradient(
+                90deg,
+                transparent 0px,
+                transparent 48%,
+                rgba(255,255,255,0.1) 48%,
+                rgba(255,255,255,0.1) 52%,
+                transparent 52%,
+                transparent 100%
+              )`,
+              backgroundSize: '100px 100%',
+            }}
+          />
+          {/* Bewegende Streifen für Speed-Effekt */}
+          <div 
+            className="absolute inset-0 animate-speed-lines"
+            style={{
+              backgroundImage: `repeating-linear-gradient(
+                90deg,
+                transparent 0px,
+                transparent 90%,
+                rgba(255,255,255,0.03) 90%,
+                rgba(255,255,255,0.03) 100%
+              )`,
+              backgroundSize: '200px 100%',
+            }}
+          />
+        </div>
 
         {/* Spieler */}
         {sortedPlayers.map((player) => {
