@@ -12,6 +12,16 @@ export interface CarItem {
   image: string
 }
 
+// Default Auto - jeder hat es
+export const DEFAULT_CAR: CarItem = {
+  id: 'default',
+  name: 'Standard F1',
+  description: 'Dein Starter-Auto. Solide und zuverlässig.',
+  price: 0,
+  rarity: 'common',
+  image: '/cars/default.png'
+}
+
 export const CAR_ITEMS: CarItem[] = [
   // === COMMON (100-500 Coins) - Direkt kaufbar mit Startguthaben ===
   {

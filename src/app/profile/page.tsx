@@ -660,7 +660,7 @@ export default function ProfilePage() {
               <div className="text-xs text-green-400 mb-2">AUSGEWÄHLTES AUTO</div>
               <div className="flex items-center gap-4">
                 <img 
-                  src={equippedCarId === 'default' ? '/cars/default.webp' : (ownedCars.find(c => c.id === equippedCarId)?.image || '/cars/default.webp')}
+                  src={equippedCarId === 'default' ? '/cars/default.png' : (ownedCars.find(c => c.id === equippedCarId)?.image || '/cars/default.png')}
                   alt="Ausgewähltes Auto"
                   className="w-24 h-16 object-contain bg-zinc-900 rounded-lg"
                 />
@@ -693,7 +693,7 @@ export default function ProfilePage() {
                   </div>
                 )}
                 <img 
-                  src="/cars/default.webp"
+                  src="/cars/default.png"
                   alt="Standard-Wagen"
                   className="w-full aspect-video object-contain bg-zinc-900"
                 />

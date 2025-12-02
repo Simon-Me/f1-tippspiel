@@ -23,16 +23,20 @@ interface SeasonRaceTrackProps {
 // Standard TopView - Default Car
 const DEFAULT_CAR_TOP = '/cars/top/default.png'
 
-// Verfügbare Top-View Bilder (alle Shop-Autos)
+// Verfügbare Top-View Bilder (alle Shop-Autos + default)
 const AVAILABLE_TOP_VIEWS = [
-  'bratwurst', 'ferrari', 'fiat', 'funnyfrisch', 'gold', 
+  'default', 'bratwurst', 'ferrari', 'fiat', 'funnyfrisch', 'gold', 
   'jeep', 'jokoklaas', 'lasagne', 'mcdonalds', 'multipla',
   'opelcorsa', 'prosieben', 'redbull'
 ]
 
 // Hole das Top-View Bild für ein Auto (falls vorhanden)
 function getCarTopView(carId?: string): string {
-  if (carId && AVAILABLE_TOP_VIEWS.includes(carId)) {
+  // Wenn kein Auto oder 'default', nutze das Standard-Auto
+  if (!carId || carId === 'default') {
+    return DEFAULT_CAR_TOP
+  }
+  if (AVAILABLE_TOP_VIEWS.includes(carId)) {
     return `/cars/top/${carId}.png`
   }
   return DEFAULT_CAR_TOP
