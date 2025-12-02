@@ -210,17 +210,21 @@ export default function ProfilePage() {
           setOwnedCars(owned)
         }
 
-        // Weltmeister-Tipp laden
-        const { data: seasonTip } = await supabase
-          .from('season_predictions')
-          .select('id, wdc_p1_driver')
-          .eq('user_id', userId)
-          .eq('season', 2025)
-          .maybeSingle()
-        
-        if (seasonTip) {
-          setChampionTipId(seasonTip.id)
-          setChampionTip(seasonTip.wdc_p1_driver)
+        // Weltmeister-Tipp laden (falls Tabelle existiert)
+        try {
+          const { data: seasonTip, error: seasonError } = await supabase
+            .from('season_predictions')
+            .select('id, wdc_p1_driver')
+            .eq('user_id', userId)
+            .eq('season', 2025)
+            .maybeSingle()
+          
+          if (!seasonError && seasonTip) {
+            setChampionTipId(seasonTip.id)
+            setChampionTip(seasonTip.wdc_p1_driver)
+          }
+        } catch {
+          // Tabelle existiert nicht - ignorieren
         }
 
         // Prüfen ob Saison gestartet
@@ -821,20 +825,25 @@ export default function ProfilePage() {
                     onClick={async () => {
                       if (!user) return
                       
-                      const data = {
-                        user_id: user.id,
-                        season: 2025,
-                        wdc_p1_driver: driver.driver_number,
-                      }
+                      try {
+                        const data = {
+                          user_id: user.id,
+                          season: 2025,
+                          wdc_p1_driver: driver.driver_number,
+                        }
 
-                      if (championTipId) {
-                        await supabase.from('season_predictions').update(data).eq('id', championTipId)
-                      } else {
-                        const { data: newTip } = await supabase.from('season_predictions').insert(data).select('id').single()
-                        if (newTip) setChampionTipId(newTip.id)
+                        if (championTipId) {
+                          await supabase.from('season_predictions').update(data).eq('id', championTipId)
+                        } else {
+                          const { data: newTip } = await supabase.from('season_predictions').insert(data).select('id').single()
+                          if (newTip) setChampionTipId(newTip.id)
+                        }
+                        
+                        setChampionTip(driver.driver_number)
+                      } catch {
+                        console.error('season_predictions table not found')
                       }
                       
-                      setChampionTip(driver.driver_number)
                       setChampionModalOpen(false)
                       setSearchTerm('')
                     }}
