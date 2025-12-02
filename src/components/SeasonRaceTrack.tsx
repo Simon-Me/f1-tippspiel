@@ -50,9 +50,10 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
 
   useEffect(() => {
     async function loadData() {
+      // Lade Profile mit equipped_car_id
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, username, total_points, avatar_url, equipped_car_id')
         .order('total_points', { ascending: false })
 
       if (!profiles) {
@@ -60,32 +61,23 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
         return
       }
 
-      // Lade equipped cars
-      const { data: userItems } = await supabase
-        .from('user_items')
-        .select('user_id, item_id, equipped')
-        .eq('equipped', true)
-
-      const userCarMap: Record<string, { id: string, name: string, image: string }> = {}
-      userItems?.forEach(item => {
-        const car = CAR_ITEMS.find(c => c.id === item.item_id)
-        if (car) {
-          userCarMap[item.user_id] = { id: car.id, name: car.name, image: car.image }
-        }
-      })
-
       const topPoints = Math.max(profiles[0]?.total_points || 0, 30)
       setMaxPoints(topPoints)
 
-      const playersWithCars: PlayerWithCar[] = profiles.map(p => ({
-        id: p.id,
-        username: p.username,
-        total_points: p.total_points || 0,
-        avatar_url: p.avatar_url,
-        equippedCarId: userCarMap[p.id]?.id,
-        equippedCarName: userCarMap[p.id]?.name,
-        equippedCarImage: userCarMap[p.id]?.image
-      }))
+      const playersWithCars: PlayerWithCar[] = profiles.map(p => {
+        const carId = p.equipped_car_id || 'default'
+        const car = CAR_ITEMS.find(c => c.id === carId)
+        
+        return {
+          id: p.id,
+          username: p.username,
+          total_points: p.total_points || 0,
+          avatar_url: p.avatar_url,
+          equippedCarId: carId,
+          equippedCarName: car?.name || 'Standard F1',
+          equippedCarImage: car?.image || '/cars/default.png'
+        }
+      })
 
       setPlayers(playersWithCars)
       setLoading(false)
