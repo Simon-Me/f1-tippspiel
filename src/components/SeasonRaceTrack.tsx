@@ -50,13 +50,14 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
 
   useEffect(() => {
     async function loadData() {
-      // Lade Profile mit equipped_car_id
-      const { data: profiles } = await supabase
+      // Lade alle Profile (mit * um Spalten-Fehler zu vermeiden)
+      const { data: profiles, error } = await supabase
         .from('profiles')
-        .select('id, username, total_points, avatar_url, equipped_car_id')
+        .select('*')
         .order('total_points', { ascending: false })
 
-      if (!profiles) {
+      if (error || !profiles) {
+        console.error('Error loading profiles:', error)
         setLoading(false)
         return
       }
@@ -64,15 +65,16 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
       const topPoints = Math.max(profiles[0]?.total_points || 0, 30)
       setMaxPoints(topPoints)
 
-      const playersWithCars: PlayerWithCar[] = profiles.map(p => {
-        const carId = p.equipped_car_id || 'default'
+      const playersWithCars: PlayerWithCar[] = profiles.map((p: Record<string, unknown>) => {
+        // equipped_car_id kann existieren oder nicht
+        const carId = (p.equipped_car_id as string) || 'default'
         const car = CAR_ITEMS.find(c => c.id === carId)
         
         return {
-          id: p.id,
-          username: p.username,
-          total_points: p.total_points || 0,
-          avatar_url: p.avatar_url,
+          id: p.id as string,
+          username: p.username as string,
+          total_points: (p.total_points as number) || 0,
+          avatar_url: p.avatar_url as string | undefined,
           equippedCarId: carId,
           equippedCarName: car?.name || 'Standard F1',
           equippedCarImage: car?.image || '/cars/default.png'
