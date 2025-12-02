@@ -54,7 +54,7 @@ export default function Navbar() {
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#E10600] rounded-full animate-ping" />
             </div>
             <span className="font-[family-name:var(--font-orbitron)] font-bold text-xl tracking-wider">
-              F1<span className="text-[#E10600]">TIPP</span>
+              F1<span className="text-[#E10600]">TIPPNASEN</span>
             </span>
           </Link>
 

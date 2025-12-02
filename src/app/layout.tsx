@@ -16,9 +16,9 @@ const orbitron = Orbitron({
 })
 
 export const metadata: Metadata = {
-  title: 'F1 Tippspiel | Race Predictions',
+  title: 'F1 Tippnasen | Race Predictions',
   description: 'Tippe auf F1 Rennergebnisse und kämpfe um die Spitze der Rangliste!',
-  keywords: 'F1, Formel 1, Tippspiel, Prediction, Racing',
+  keywords: 'F1, Formel 1, Tippnasen, Prediction, Racing',
 }
 
 export default function RootLayout({

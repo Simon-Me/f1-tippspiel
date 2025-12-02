@@ -61,7 +61,7 @@ export default function RegisterPage() {
           <div className="w-20 h-20 mx-auto bg-[#00FF7F] rounded-full flex items-center justify-center mb-6 glow-green">
             <Check className="w-10 h-10 text-black" />
           </div>
-          <h1 className="text-2xl font-bold mb-2">Willkommen bei F1 Tipp!</h1>
+          <h1 className="text-2xl font-bold mb-2">Willkommen bei F1 Tippnasen!</h1>
           <p className="text-gray-400">Du wirst gleich weitergeleitet...</p>
           <div className="mt-6">
             <div className="w-8 h-8 border-4 border-[#E10600] border-t-transparent rounded-full tire-spin mx-auto" />
@@ -89,7 +89,7 @@ export default function RegisterPage() {
         {/* Form Card */}
         <div className="race-card p-8 gradient-border">
           <h1 className="text-2xl font-bold text-center mb-2">Account erstellen</h1>
-          <p className="text-gray-400 text-center mb-8">Werde Teil der F1 Tippspiel Community</p>
+          <p className="text-gray-400 text-center mb-8">Werde Teil der F1 Tippnasen Community</p>
 
           {error && (
             <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4 mb-6 flex items-center gap-3">

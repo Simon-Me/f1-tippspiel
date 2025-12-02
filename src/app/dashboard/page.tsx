@@ -156,7 +156,17 @@ export default function DashboardPage() {
       
       const h = differenceInHours(nextSessionTime, now)
       const m = differenceInMinutes(nextSessionTime, now) % 60
-      setCountdown(h > 0 ? `${h}h ${m}m` : `${m} min`)
+      
+      // Mehr als 48 Stunden → Tage anzeigen
+      if (h >= 48) {
+        const days = Math.floor(h / 24)
+        const remainingHours = h % 24
+        setCountdown(`${days}d ${remainingHours}h`)
+      } else if (h > 0) {
+        setCountdown(`${h}h ${m}m`)
+      } else {
+        setCountdown(`${m} min`)
+      }
     }
     
     update()
@@ -234,7 +244,7 @@ export default function DashboardPage() {
         <div className="mb-12 flex items-center gap-4">
           <Avatar url={profile?.avatar_url} username={profile?.username} size="xl" />
           <div>
-            <p className="text-gray-500 text-sm uppercase tracking-wider mb-1">F1 Tippspiel 2025</p>
+            <p className="text-gray-500 text-sm uppercase tracking-wider mb-1">F1 Tippnasen 2025</p>
             <h1 className="text-4xl font-bold">Hey, {profile?.username} 👋</h1>
             <div className="flex items-center gap-3 mt-2 text-sm">
               <span className="text-gray-400">{profile?.total_points || 0} Punkte</span>

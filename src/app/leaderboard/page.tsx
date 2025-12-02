@@ -250,7 +250,7 @@ export default function LeaderboardPage() {
       <main className="pt-24 pb-16 px-6 max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-12">
-          <p className="text-gray-500 text-sm uppercase tracking-wider mb-1">F1 Tippspiel 2025</p>
+          <p className="text-gray-500 text-sm uppercase tracking-wider mb-1">F1 Tippnasen 2025</p>
           <h1 className="text-4xl font-bold flex items-center gap-3">
             <Trophy className="w-10 h-10 text-yellow-500" />
             Rangliste
