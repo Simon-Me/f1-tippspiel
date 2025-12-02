@@ -22,3 +22,4 @@ SELECT 'auth.users', COUNT(*) FROM auth.users;
 
 
 
+
