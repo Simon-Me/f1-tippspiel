@@ -214,47 +214,69 @@ export async function GET(request: Request) {
   if (recalcAll) {
     console.log('[Recalc] Starting full recalculation with new points system...')
     
-    // 1. Alle Prediction-Punkte auf 0 setzen
-    await supabase.from('predictions').update({ points_earned: 0 }).gte('id', '00000000-0000-0000-0000-000000000000')
-    
-    // 2. Alle Rennen auf "pending" setzen
-    await supabase.from('races').update({ status: 'pending' }).eq('season', 2025)
-    
-    // 3. Alle Profile-Punkte auf 0 setzen (aber Coins behalten!)
-    await supabase.from('profiles').update({ total_points: 0 }).gte('id', '00000000-0000-0000-0000-000000000000')
-    
-    // 4. Alle vergangenen Rennen neu berechnen
-    const today = new Date().toISOString().split('T')[0]
-    const { data: pastRaces } = await supabase
-      .from('races')
-      .select('id, round, race_name')
-      .eq('season', 2025)
-      .lte('race_date', today)
-      .order('round', { ascending: true })
-    
-    const results: { round: number, name: string, calculated: boolean }[] = []
-    
-    for (const race of pastRaces || []) {
-      console.log(`[Recalc] Processing Round ${race.round}: ${race.race_name}`)
-      const calcResult = await calculateRacePoints(race.round, race.id)
+    try {
+      // 1. Alle Prediction-Punkte auf 0 setzen
+      const { error: predError } = await supabase
+        .from('predictions')
+        .update({ points_earned: 0 })
+        .not('id', 'is', null)
+      if (predError) console.error('Pred reset error:', predError)
       
-      if (calcResult.race?.calculated) {
-        await supabase.from('races').update({ status: 'finished' }).eq('id', race.id)
-        results.push({ round: race.round, name: race.race_name, calculated: true })
+      // 2. Alle Rennen auf "pending" setzen
+      const { error: raceError } = await supabase
+        .from('races')
+        .update({ status: 'pending' })
+        .eq('season', 2025)
+      if (raceError) console.error('Race reset error:', raceError)
+      
+      // 3. Alle Profile-Punkte auf 0 setzen (aber Coins behalten!)
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ total_points: 0 })
+        .not('id', 'is', null)
+      if (profileError) console.error('Profile reset error:', profileError)
+      
+      // 4. Alle vergangenen Rennen neu berechnen
+      const today = new Date().toISOString().split('T')[0]
+      const { data: pastRaces, error: fetchError } = await supabase
+        .from('races')
+        .select('id, round, race_name')
+        .eq('season', 2025)
+        .lte('race_date', today)
+        .order('round', { ascending: true })
+      
+      if (fetchError) {
+        console.error('Fetch races error:', fetchError)
+        return NextResponse.json({ error: 'Failed to fetch races', details: fetchError }, { status: 500 })
       }
+      
+      const results: { round: number, name: string, calculated: boolean }[] = []
+      
+      for (const race of pastRaces || []) {
+        console.log(`[Recalc] Processing Round ${race.round}: ${race.race_name}`)
+        const calcResult = await calculateRacePoints(race.round, race.id)
+        
+        if (calcResult.race?.calculated) {
+          await supabase.from('races').update({ status: 'finished' }).eq('id', race.id)
+          results.push({ round: race.round, name: race.race_name, calculated: true })
+        }
+      }
+      
+      // 5. Profile-Punkte aktualisieren
+      const profilesUpdated = await updateAllProfiles()
+      
+      return NextResponse.json({
+        success: true,
+        mode: 'recalc_all',
+        racesProcessed: results.length,
+        races: results,
+        profilesUpdated,
+        timestamp: new Date().toISOString()
+      })
+    } catch (err) {
+      console.error('[Recalc] Error:', err)
+      return NextResponse.json({ error: 'Recalc failed', details: String(err) }, { status: 500 })
     }
-    
-    // 5. Profile-Punkte aktualisieren
-    const profilesUpdated = await updateAllProfiles()
-    
-    return NextResponse.json({
-      success: true,
-      mode: 'recalc_all',
-      racesProcessed: results.length,
-      races: results,
-      profilesUpdated,
-      timestamp: new Date().toISOString()
-    })
   }
   
   // Wenn eine spezifische Runde angegeben, nur diese berechnen
