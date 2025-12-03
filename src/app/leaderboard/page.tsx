@@ -515,26 +515,53 @@ export default function LeaderboardPage() {
                   </div>
                 )}
 
-                {/* Hinweis für kommende Rennen */}
-                {selectedRace?.status !== 'finished' && playerTips.length > 0 && (
-                  <div className="bg-blue-950/30 rounded-2xl p-4 mb-4 border border-blue-800/50 text-center">
-                    <p className="text-blue-400 text-sm">
-                      🏁 Dieses Rennen steht noch aus – hier siehst du die bisherigen Tipps!
-                    </p>
-                  </div>
-                )}
+                {/* Prüfe ob Quali schon gestartet ist */}
+                {(() => {
+                  const now = new Date()
+                  // Quali startet typischerweise am Samstag - wir nutzen quali_date wenn vorhanden, sonst 1 Tag vor Rennen
+                  const qualiDate = selectedRace?.quali_date 
+                    ? new Date(selectedRace.quali_date) 
+                    : new Date(new Date(selectedRace?.race_date || '').getTime() - 24 * 60 * 60 * 1000)
+                  const qualiStarted = now >= qualiDate
+                  const isFinished = selectedRace?.status === 'finished'
+                  const canShowTips = isFinished || qualiStarted
+                  
+                  return (
+                    <>
+                      {/* Tipps versteckt bis Quali startet */}
+                      {!canShowTips && (
+                        <div className="bg-zinc-900/50 rounded-2xl p-8 mb-4 border border-zinc-800 text-center">
+                          <div className="text-4xl mb-3">🔒</div>
+                          <p className="text-gray-400 font-medium">Tipps sind noch geheim!</p>
+                          <p className="text-gray-600 text-sm mt-2">
+                            Die Tipps werden sichtbar sobald das Qualifying startet.
+                          </p>
+                          <p className="text-gray-500 text-xs mt-3">
+                            {playerTips.length} Spieler haben bereits getippt
+                          </p>
+                        </div>
+                      )}
 
-                {/* Keine Tipps Message */}
-                {selectedRace?.status !== 'finished' && playerTips.length === 0 && (
-                  <div className="bg-zinc-900/50 rounded-2xl p-8 mb-4 border border-zinc-800 text-center">
-                    <Calendar className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                    <p className="text-gray-400">Noch keine Tipps für dieses Rennen.</p>
-                    <p className="text-gray-600 text-sm mt-1">Tipps werden hier angezeigt sobald jemand getippt hat.</p>
-                  </div>
-                )}
+                      {/* Hinweis für laufende Rennen */}
+                      {canShowTips && !isFinished && playerTips.length > 0 && (
+                        <div className="bg-blue-950/30 rounded-2xl p-4 mb-4 border border-blue-800/50 text-center">
+                          <p className="text-blue-400 text-sm">
+                            🏁 Dieses Rennen steht noch aus – hier siehst du die bisherigen Tipps!
+                          </p>
+                        </div>
+                      )}
 
-                {/* Spieler Tipps als Tabelle */}
-                {playerTips.length > 0 && (
+                      {/* Keine Tipps Message */}
+                      {canShowTips && !isFinished && playerTips.length === 0 && (
+                        <div className="bg-zinc-900/50 rounded-2xl p-8 mb-4 border border-zinc-800 text-center">
+                          <Calendar className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                          <p className="text-gray-400">Noch keine Tipps für dieses Rennen.</p>
+                          <p className="text-gray-600 text-sm mt-1">Tipps werden hier angezeigt sobald jemand getippt hat.</p>
+                        </div>
+                      )}
+
+                      {/* Spieler Tipps als Tabelle - nur wenn sichtbar */}
+                      {canShowTips && playerTips.length > 0 && (
                   <div className="bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-800">
                     <div className="p-3 border-b border-zinc-800 flex items-center justify-between">
                       <p className="text-gray-400 text-sm font-medium flex items-center gap-2">
@@ -748,6 +775,9 @@ export default function LeaderboardPage() {
                     <p className="text-gray-400">Keine Tipps für dieses Rennen vorhanden.</p>
                   </div>
                 )}
+                    </>
+                  )
+                })()}
 
                 {/* Legende */}
                 <div className="mt-4 p-4 bg-zinc-900/50 rounded-xl">
