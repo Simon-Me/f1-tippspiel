@@ -515,22 +515,31 @@ export default function LeaderboardPage() {
                   </div>
                 )}
 
-                {/* Keine Ergebnisse Message */}
-                {selectedRace?.status !== 'finished' && (
+                {/* Hinweis für kommende Rennen */}
+                {selectedRace?.status !== 'finished' && playerTips.length > 0 && (
+                  <div className="bg-blue-950/30 rounded-2xl p-4 mb-4 border border-blue-800/50 text-center">
+                    <p className="text-blue-400 text-sm">
+                      🏁 Dieses Rennen steht noch aus – hier siehst du die bisherigen Tipps!
+                    </p>
+                  </div>
+                )}
+
+                {/* Keine Tipps Message */}
+                {selectedRace?.status !== 'finished' && playerTips.length === 0 && (
                   <div className="bg-zinc-900/50 rounded-2xl p-8 mb-4 border border-zinc-800 text-center">
                     <Calendar className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                    <p className="text-gray-400">Dieses Rennen wurde noch nicht ausgewertet.</p>
-                    <p className="text-gray-600 text-sm mt-1">Tipps werden nach dem Rennen angezeigt.</p>
+                    <p className="text-gray-400">Noch keine Tipps für dieses Rennen.</p>
+                    <p className="text-gray-600 text-sm mt-1">Tipps werden hier angezeigt sobald jemand getippt hat.</p>
                   </div>
                 )}
 
                 {/* Spieler Tipps als Tabelle */}
-                {playerTips.length > 0 && selectedRace?.status === 'finished' && (
+                {playerTips.length > 0 && (
                   <div className="bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-800">
                     <div className="p-3 border-b border-zinc-800 flex items-center justify-between">
                       <p className="text-gray-400 text-sm font-medium flex items-center gap-2">
                         <Zap className="w-4 h-4 text-yellow-500" />
-                        Spieler-Tipps für dieses Event
+                        {selectedRace?.status === 'finished' ? 'Spieler-Tipps für dieses Event' : 'Abgegebene Tipps'}
                       </p>
                       <p className="text-xs text-gray-500">{playerTips.length} Spieler haben getippt</p>
                     </div>
@@ -541,25 +550,41 @@ export default function LeaderboardPage() {
                           <tr className="bg-zinc-800/50">
                             <th className="text-left p-3 text-gray-400 font-medium">#</th>
                             <th className="text-left p-3 text-gray-400 font-medium">Spieler</th>
-                            {sessionResults.qualifying && (
-                              <th className="text-center p-3 text-blue-400 font-medium">Q Pole</th>
-                            )}
-                            {sessionResults.sprint && (
+                            {/* Bei beendeten Rennen: Spalten basierend auf Ergebnissen */}
+                            {selectedRace?.status === 'finished' ? (
                               <>
-                                <th className="text-center p-3 text-purple-400 font-medium">S P1</th>
-                                <th className="text-center p-3 text-purple-400 font-medium">S P2</th>
-                                <th className="text-center p-3 text-purple-400 font-medium">S P3</th>
+                                {sessionResults.qualifying && (
+                                  <th className="text-center p-3 text-blue-400 font-medium">Q Pole</th>
+                                )}
+                                {sessionResults.sprint && (
+                                  <>
+                                    <th className="text-center p-3 text-purple-400 font-medium">S P1</th>
+                                    <th className="text-center p-3 text-purple-400 font-medium">S P2</th>
+                                    <th className="text-center p-3 text-purple-400 font-medium">S P3</th>
+                                  </>
+                                )}
+                                {sessionResults.race && (
+                                  <>
+                                    <th className="text-center p-3 text-red-400 font-medium">R P1</th>
+                                    <th className="text-center p-3 text-red-400 font-medium">R P2</th>
+                                    <th className="text-center p-3 text-red-400 font-medium">R P3</th>
+                                    <th className="text-center p-3 text-red-400 font-medium">R FL</th>
+                                  </>
+                                )}
                               </>
-                            )}
-                            {sessionResults.race && (
+                            ) : (
+                              /* Bei kommenden Rennen: Alle Tipp-Spalten anzeigen */
                               <>
+                                <th className="text-center p-3 text-blue-400 font-medium">Q Pole</th>
                                 <th className="text-center p-3 text-red-400 font-medium">R P1</th>
                                 <th className="text-center p-3 text-red-400 font-medium">R P2</th>
                                 <th className="text-center p-3 text-red-400 font-medium">R P3</th>
                                 <th className="text-center p-3 text-red-400 font-medium">R FL</th>
                               </>
                             )}
-                            <th className="text-right p-3 text-green-400 font-medium">Punkte</th>
+                            {selectedRace?.status === 'finished' && (
+                              <th className="text-right p-3 text-green-400 font-medium">Punkte</th>
+                            )}
                           </tr>
                         </thead>
                         <tbody>
@@ -568,8 +593,10 @@ export default function LeaderboardPage() {
                             const qualiTip = player.tips.find(t => t.session === 'qualifying')
                             const sprintTip = player.tips.find(t => t.session === 'sprint')
                             const raceTip = player.tips.find(t => t.session === 'race')
+                            const isFinished = selectedRace?.status === 'finished'
                             
                             const getPodiumClass = (tipNum: number | undefined, correctNum: number, podiumNums: number[]) => {
+                              if (!isFinished) return 'text-white' // Neutral für kommende Rennen
                               if (tipNum === correctNum) return 'text-green-400 font-bold'
                               if (tipNum && podiumNums.includes(tipNum)) return 'text-yellow-400'
                               return 'text-red-400'
@@ -602,85 +629,111 @@ export default function LeaderboardPage() {
                                   </div>
                                 </td>
                                 
-                                {/* Quali */}
-                                {sessionResults.qualifying && (
-                                  <td className="p-3 text-center">
-                                    {qualiTip ? (
-                                      <span className={qualiTip.tipPoleNum === sessionResults.qualifying.pole ? 'text-green-400 font-bold' : 'text-red-400'}>
-                                        {qualiTip.tipPole}
-                                        {qualiTip.tipPoleNum === sessionResults.qualifying.pole ? 
-                                          <Check className="w-3 h-3 inline ml-1" /> : 
-                                          <X className="w-3 h-3 inline ml-1" />
-                                        }
-                                      </span>
-                                    ) : <span className="text-gray-600">-</span>}
+                                {isFinished ? (
+                                  /* Bei beendeten Rennen: Mit Vergleich zu Ergebnissen */
+                                  <>
+                                    {/* Quali */}
+                                    {sessionResults.qualifying && (
+                                      <td className="p-3 text-center">
+                                        {qualiTip ? (
+                                          <span className={qualiTip.tipPoleNum === sessionResults.qualifying.pole ? 'text-green-400 font-bold' : 'text-red-400'}>
+                                            {qualiTip.tipPole}
+                                            {qualiTip.tipPoleNum === sessionResults.qualifying.pole ? 
+                                              <Check className="w-3 h-3 inline ml-1" /> : 
+                                              <X className="w-3 h-3 inline ml-1" />
+                                            }
+                                          </span>
+                                        ) : <span className="text-gray-600">-</span>}
+                                      </td>
+                                    )}
+                                    
+                                    {/* Sprint */}
+                                    {sessionResults.sprint && (
+                                      <>
+                                        <td className="p-3 text-center">
+                                          {sprintTip ? (
+                                            <span className={getPodiumClass(sprintTip.tipP1Num, sessionResults.sprint.p1, sprintPodium)}>
+                                              {sprintTip.tipP1}
+                                            </span>
+                                          ) : <span className="text-gray-600">-</span>}
+                                        </td>
+                                        <td className="p-3 text-center">
+                                          {sprintTip ? (
+                                            <span className={getPodiumClass(sprintTip.tipP2Num, sessionResults.sprint.p2, sprintPodium)}>
+                                              {sprintTip.tipP2}
+                                            </span>
+                                          ) : <span className="text-gray-600">-</span>}
+                                        </td>
+                                        <td className="p-3 text-center">
+                                          {sprintTip ? (
+                                            <span className={getPodiumClass(sprintTip.tipP3Num, sessionResults.sprint.p3, sprintPodium)}>
+                                              {sprintTip.tipP3}
+                                            </span>
+                                          ) : <span className="text-gray-600">-</span>}
+                                        </td>
+                                      </>
+                                    )}
+                                    
+                                    {/* Race */}
+                                    {sessionResults.race && (
+                                      <>
+                                        <td className="p-3 text-center">
+                                          {raceTip ? (
+                                            <span className={getPodiumClass(raceTip.tipP1Num, sessionResults.race.p1, racePodium)}>
+                                              {raceTip.tipP1}
+                                            </span>
+                                          ) : <span className="text-gray-600">-</span>}
+                                        </td>
+                                        <td className="p-3 text-center">
+                                          {raceTip ? (
+                                            <span className={getPodiumClass(raceTip.tipP2Num, sessionResults.race.p2, racePodium)}>
+                                              {raceTip.tipP2}
+                                            </span>
+                                          ) : <span className="text-gray-600">-</span>}
+                                        </td>
+                                        <td className="p-3 text-center">
+                                          {raceTip ? (
+                                            <span className={getPodiumClass(raceTip.tipP3Num, sessionResults.race.p3, racePodium)}>
+                                              {raceTip.tipP3}
+                                            </span>
+                                          ) : <span className="text-gray-600">-</span>}
+                                        </td>
+                                        <td className="p-3 text-center">
+                                          {raceTip?.tipFL ? (
+                                            <span className={raceTip.tipFLNum === sessionResults.race.fl ? 'text-green-400 font-bold' : 'text-red-400'}>
+                                              {raceTip.tipFL}
+                                            </span>
+                                          ) : <span className="text-gray-600">-</span>}
+                                        </td>
+                                      </>
+                                    )}
+                                  </>
+                                ) : (
+                                  /* Bei kommenden Rennen: Einfache Anzeige ohne Bewertung */
+                                  <>
+                                    <td className="p-3 text-center">
+                                      <span className="text-white">{qualiTip?.tipPole || '-'}</span>
+                                    </td>
+                                    <td className="p-3 text-center">
+                                      <span className="text-white">{raceTip?.tipP1 || '-'}</span>
+                                    </td>
+                                    <td className="p-3 text-center">
+                                      <span className="text-white">{raceTip?.tipP2 || '-'}</span>
+                                    </td>
+                                    <td className="p-3 text-center">
+                                      <span className="text-white">{raceTip?.tipP3 || '-'}</span>
+                                    </td>
+                                    <td className="p-3 text-center">
+                                      <span className="text-white">{raceTip?.tipFL || '-'}</span>
+                                    </td>
+                                  </>
+                                )}
+                                
+                                {isFinished && (
+                                  <td className="p-3 text-right">
+                                    <span className="text-green-400 font-bold text-lg">+{player.totalEventPoints}</span>
                                   </td>
                                 )}
-                                
-                                {/* Sprint */}
-                                {sessionResults.sprint && (
-                                  <>
-                                    <td className="p-3 text-center">
-                                      {sprintTip ? (
-                                        <span className={getPodiumClass(sprintTip.tipP1Num, sessionResults.sprint.p1, sprintPodium)}>
-                                          {sprintTip.tipP1}
-                                        </span>
-                                      ) : <span className="text-gray-600">-</span>}
-                                    </td>
-                                    <td className="p-3 text-center">
-                                      {sprintTip ? (
-                                        <span className={getPodiumClass(sprintTip.tipP2Num, sessionResults.sprint.p2, sprintPodium)}>
-                                          {sprintTip.tipP2}
-                                        </span>
-                                      ) : <span className="text-gray-600">-</span>}
-                                    </td>
-                                    <td className="p-3 text-center">
-                                      {sprintTip ? (
-                                        <span className={getPodiumClass(sprintTip.tipP3Num, sessionResults.sprint.p3, sprintPodium)}>
-                                          {sprintTip.tipP3}
-                                        </span>
-                                      ) : <span className="text-gray-600">-</span>}
-                                    </td>
-                                  </>
-                                )}
-                                
-                                {/* Race */}
-                                {sessionResults.race && (
-                                  <>
-                                    <td className="p-3 text-center">
-                                      {raceTip ? (
-                                        <span className={getPodiumClass(raceTip.tipP1Num, sessionResults.race.p1, racePodium)}>
-                                          {raceTip.tipP1}
-                                        </span>
-                                      ) : <span className="text-gray-600">-</span>}
-                                    </td>
-                                    <td className="p-3 text-center">
-                                      {raceTip ? (
-                                        <span className={getPodiumClass(raceTip.tipP2Num, sessionResults.race.p2, racePodium)}>
-                                          {raceTip.tipP2}
-                                        </span>
-                                      ) : <span className="text-gray-600">-</span>}
-                                    </td>
-                                    <td className="p-3 text-center">
-                                      {raceTip ? (
-                                        <span className={getPodiumClass(raceTip.tipP3Num, sessionResults.race.p3, racePodium)}>
-                                          {raceTip.tipP3}
-                                        </span>
-                                      ) : <span className="text-gray-600">-</span>}
-                                    </td>
-                                    <td className="p-3 text-center">
-                                      {raceTip?.tipFL ? (
-                                        <span className={raceTip.tipFLNum === sessionResults.race.fl ? 'text-green-400 font-bold' : 'text-red-400'}>
-                                          {raceTip.tipFL}
-                                        </span>
-                                      ) : <span className="text-gray-600">-</span>}
-                                    </td>
-                                  </>
-                                )}
-                                
-                                <td className="p-3 text-right">
-                                  <span className="text-green-400 font-bold text-lg">+{player.totalEventPoints}</span>
-                                </td>
                               </tr>
                             )
                           })}
