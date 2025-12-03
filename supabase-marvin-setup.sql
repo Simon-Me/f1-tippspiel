@@ -29,3 +29,4 @@ USING (true);
 -- Nur authenticated users können incrementen (über die RPC Funktion)
 GRANT EXECUTE ON FUNCTION increment_marvin_thanks TO authenticated;
 
+
