@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import Navbar from '@/components/Navbar'
@@ -43,6 +43,29 @@ interface SessionResult {
   race?: { p1: number, p2: number, p3: number, fl: number, p1Name: string, p2Name: string, p3Name: string, flName: string }
 }
 
+const DRIVER_NAMES: Record<number, string> = {
+  1: 'Verstappen', 4: 'Norris', 16: 'Leclerc', 81: 'Piastri', 55: 'Sainz',
+  63: 'Russell', 44: 'Hamilton', 14: 'Alonso', 18: 'Stroll', 27: 'Hülkenberg',
+  12: 'Antonelli', 10: 'Gasly', 22: 'Tsunoda', 31: 'Ocon', 23: 'Albon',
+  77: 'Bottas', 24: 'Zhou', 20: 'Magnussen', 30: 'Lawson', 6: 'Hadjar',
+  87: 'Bearman', 7: 'Doohan', 43: 'Colapinto', 5: 'Bortoleto'
+}
+
+const DRIVER_MAP: Record<string, number> = {
+  'VER': 1, 'NOR': 4, 'LEC': 16, 'PIA': 81, 'SAI': 55,
+  'RUS': 63, 'HAM': 44, 'ALO': 14, 'STR': 18, 'HUL': 27,
+  'ANT': 12, 'GAS': 10, 'TSU': 22, 'OCO': 31, 'ALB': 23,
+  'BOT': 77, 'ZHO': 24, 'MAG': 20, 'LAW': 30, 'HAD': 6,
+  'BEA': 87, 'DOO': 7, 'COL': 43, 'BOR': 5
+}
+
+// Helper outside component to avoid recreation
+const getDriverNameFromList = (num: number | null | undefined, driversList: Driver[]): string => {
+  if (!num) return '-'
+  const d = driversList.find(d => d.driver_number === num)
+  return d?.full_name?.split(' ').pop() || DRIVER_NAMES[num] || '-'
+}
+
 export default function LeaderboardPage() {
   const { user } = useAuth()
   const [players, setPlayers] = useState<Profile[]>([])
@@ -52,37 +75,20 @@ export default function LeaderboardPage() {
   const [playerTips, setPlayerTips] = useState<PlayerTips[]>([])
   const [sessionResults, setSessionResults] = useState<SessionResult>({})
   const [loadingRace, setLoadingRace] = useState(false)
-  const [driversList, setDriversList] = useState<Driver[]>([])
-
-  const DRIVER_NAMES: Record<number, string> = {
-    1: 'Verstappen', 4: 'Norris', 16: 'Leclerc', 81: 'Piastri', 55: 'Sainz',
-    63: 'Russell', 44: 'Hamilton', 14: 'Alonso', 18: 'Stroll', 27: 'Hülkenberg',
-    12: 'Antonelli', 10: 'Gasly', 22: 'Tsunoda', 31: 'Ocon', 23: 'Albon',
-    77: 'Bottas', 24: 'Zhou', 20: 'Magnussen', 30: 'Lawson', 6: 'Hadjar',
-    87: 'Bearman', 7: 'Doohan', 43: 'Colapinto', 5: 'Bortoleto'
-  }
   
-  const getDriverName = useCallback((num: number | null | undefined): string => {
-    if (!num) return '-'
-    const d = driversList.find(d => d.driver_number === num)
-    return d?.full_name?.split(' ').pop() || DRIVER_NAMES[num] || '-'
-  }, [driversList])
-
-  const DRIVER_MAP: Record<string, number> = {
-    'VER': 1, 'NOR': 4, 'LEC': 16, 'PIA': 81, 'SAI': 55,
-    'RUS': 63, 'HAM': 44, 'ALO': 14, 'STR': 18, 'HUL': 27,
-    'ANT': 12, 'GAS': 10, 'TSU': 22, 'OCO': 31, 'ALB': 23,
-    'BOT': 77, 'ZHO': 24, 'MAG': 20, 'LAW': 30, 'HAD': 6,
-    'BEA': 87, 'DOO': 7, 'COL': 43, 'BOR': 5
-  }
+  // Use refs to avoid dependency issues
+  const driversRef = useRef<Driver[]>([])
+  const playersRef = useRef<Profile[]>([])
+  const hasLoadedRef = useRef(false)
 
   // Lade Daten für ein bestimmtes Rennen
-  const loadRaceData = useCallback(async (race: Race, profilesData: Profile[]) => {
+  const loadRaceData = async (race: Race) => {
     if (!race) return
     setLoadingRace(true)
     
     const results: SessionResult = {}
     const getNum = (code: string) => DRIVER_MAP[code] || 0
+    const getDriverName = (num: number | null | undefined) => getDriverNameFromList(num, driversRef.current)
 
     try {
       const resultsRes = await fetch(`/api/race-results/${race.round}`)
@@ -136,10 +142,10 @@ export default function LeaderboardPage() {
       .select('*')
       .eq('race_id', race.id)
     
-    if (preds && profilesData) {
+    if (preds && playersRef.current.length > 0) {
       const byPlayer: Record<string, PlayerTips> = {}
       
-      profilesData.forEach(profile => {
+      playersRef.current.forEach(profile => {
         byPlayer[profile.id] = {
           username: profile.username,
           oderId: profile.id,
@@ -198,55 +204,62 @@ export default function LeaderboardPage() {
     }
     
     setLoadingRace(false)
-  }, [getDriverName])
+  }
 
-  const fetchData = useCallback(async () => {
-    try {
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('total_points', { ascending: false })
-      
-      if (profilesData) setPlayers(profilesData)
-      
-      const driversRes = await fetch('/api/drivers')
-      const driversJson = await driversRes.json()
-      const drivers: Driver[] = driversJson.drivers || []
-      setDriversList(drivers)
-      
-      // Alle Rennen laden
-      const { data: races } = await supabase
-        .from('races')
-        .select('*')
-        .eq('season', 2025)
-        .order('round', { ascending: true })
-      
-      if (races) {
-        setAllRaces(races)
+  // Initial data fetch - runs only once
+  useEffect(() => {
+    if (hasLoadedRef.current) return
+    hasLoadedRef.current = true
+    
+    const fetchData = async () => {
+      try {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('*')
+          .order('total_points', { ascending: false })
         
-        // Finde das letzte abgeschlossene Rennen
-        const finishedRaces = races.filter(r => r.status === 'finished')
-        if (finishedRaces.length > 0) {
-          const lastFinished = finishedRaces[finishedRaces.length - 1]
-          const idx = races.findIndex(r => r.id === lastFinished.id)
-          setSelectedRaceIndex(idx)
+        if (profilesData) {
+          setPlayers(profilesData)
+          playersRef.current = profilesData
+        }
+        
+        const driversRes = await fetch('/api/drivers')
+        const driversJson = await driversRes.json()
+        const drivers: Driver[] = driversJson.drivers || []
+        driversRef.current = drivers
+        
+        // Alle Rennen laden
+        const { data: races } = await supabase
+          .from('races')
+          .select('*')
+          .eq('season', 2025)
+          .order('round', { ascending: true })
+        
+        if (races) {
+          setAllRaces(races)
           
-          if (profilesData) {
-            await loadRaceData(lastFinished, profilesData)
+          // Finde das letzte abgeschlossene Rennen
+          const finishedRaces = races.filter(r => r.status === 'finished')
+          if (finishedRaces.length > 0) {
+            const lastFinished = finishedRaces[finishedRaces.length - 1]
+            const idx = races.findIndex(r => r.id === lastFinished.id)
+            setSelectedRaceIndex(idx)
+            
+            await loadRaceData(lastFinished)
           }
         }
-      }
-    } catch (e) { console.error(e) }
-    finally { setLoadingData(false) }
-  }, [loadRaceData])
-
-  useEffect(() => { fetchData() }, [fetchData])
+      } catch (e) { console.error(e) }
+      finally { setLoadingData(false) }
+    }
+    
+    fetchData()
+  }, [])
 
   // Rennen wechseln
   const changeRace = async (newIndex: number) => {
-    if (newIndex < 0 || newIndex >= allRaces.length) return
+    if (newIndex < 0 || newIndex >= allRaces.length || loadingRace) return
     setSelectedRaceIndex(newIndex)
-    await loadRaceData(allRaces[newIndex], players)
+    await loadRaceData(allRaces[newIndex])
   }
 
   const selectedRace = allRaces[selectedRaceIndex]
