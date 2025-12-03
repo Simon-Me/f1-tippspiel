@@ -770,14 +770,26 @@ export default function LeaderboardPage() {
                       <span className="text-gray-400">= Kein Tipp</span>
                     </div>
                   </div>
-                  <div className="mt-3 pt-3 border-t border-zinc-800 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-gray-500">
-                    <div>R P1/P2/P3: <span className="text-white">25/18/15</span></div>
-                    <div>R Podium~: <span className="text-yellow-400">+5</span></div>
-                    <div>S P1/P2/P3: <span className="text-white">15/10/5</span></div>
-                    <div>S Podium~: <span className="text-yellow-400">+3</span></div>
-                    <div>Q Pole: <span className="text-white">10</span></div>
-                    <div>FL: <span className="text-white">10</span></div>
-                    <div>Perfekt: <span className="text-white">+20</span></div>
+                  <div className="mt-3 pt-3 border-t border-zinc-800">
+                    <p className="text-gray-500 text-xs uppercase tracking-wider mb-2">Punktesystem</p>
+                    <div className="grid grid-cols-3 gap-3 text-xs">
+                      <div className="bg-zinc-800/50 rounded-lg p-2">
+                        <p className="text-blue-400 font-bold mb-1">Quali</p>
+                        <div className="text-gray-400">Pole: <span className="text-white">3</span></div>
+                        <div className="text-gray-400">Pole auf P2: <span className="text-white">1</span></div>
+                      </div>
+                      <div className="bg-zinc-800/50 rounded-lg p-2">
+                        <p className="text-purple-400 font-bold mb-1">Sprint</p>
+                        <div className="text-gray-400">P1/P2/P3: <span className="text-white">3/2/1</span></div>
+                        <div className="text-gray-400">Podium~: <span className="text-yellow-400">+1</span></div>
+                      </div>
+                      <div className="bg-zinc-800/50 rounded-lg p-2">
+                        <p className="text-red-400 font-bold mb-1">Rennen</p>
+                        <div className="text-gray-400">P1/P2/P3: <span className="text-white">5/4/3</span></div>
+                        <div className="text-gray-400">Podium~: <span className="text-yellow-400">+1</span></div>
+                        <div className="text-gray-400">FL: <span className="text-white">+1</span></div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </>

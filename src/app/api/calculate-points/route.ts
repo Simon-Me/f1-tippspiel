@@ -6,19 +6,26 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-// Points system
+// Neues Punktesystem (vereinfacht)
 const POINTS = {
-  RACE_P1: 25,
-  RACE_P2: 18,
-  RACE_P3: 15,
-  RACE_ON_PODIUM: 5,
-  RACE_FASTEST_LAP: 10,
-  RACE_PERFECT_BONUS: 20,
-  SPRINT_P1: 15,
-  SPRINT_P2: 10,
-  SPRINT_P3: 5,
-  SPRINT_ON_PODIUM: 3,
-  QUALI_POLE: 10,
+  // Qualifikation
+  QUALI_POLE: 3,        // Richtiger Pole-Tipp
+  QUALI_POLE_ON_P2: 1,  // Pole-Tipp ist auf P2
+  
+  // Sprintrennen
+  SPRINT_P1: 3,         // Richtiger P1
+  SPRINT_P2: 2,         // Richtiger P2
+  SPRINT_P3: 1,         // Richtiger P3
+  SPRINT_ON_PODIUM: 1,  // Richtiger Name, falscher Podiumsplatz
+  
+  // Hauptrennen
+  RACE_P1: 5,           // Richtiger P1
+  RACE_P2: 4,           // Richtiger P2
+  RACE_P3: 3,           // Richtiger P3
+  RACE_ON_PODIUM: 1,    // Richtiger Name, falscher Podiumsplatz
+  
+  // Fastest Lap
+  FASTEST_LAP: 1,       // Bonuspunkt für schnellste Runde
 }
 
 const DRIVER_NUMBER_MAP: Record<string, number> = {
@@ -50,7 +57,9 @@ async function calculateRacePoints(raceRound: number, dbRaceId: string) {
 
     if (qualiResults?.length > 0) {
       const pole = qualiResults[0]
+      const p2 = qualiResults[1]
       const poleNum = getDriverNumber(pole.Driver.code, pole.Driver.permanentNumber)
+      const p2Num = p2 ? getDriverNumber(p2.Driver.code, p2.Driver.permanentNumber) : null
 
       const { data: predictions } = await supabase
         .from('predictions')
@@ -59,7 +68,12 @@ async function calculateRacePoints(raceRound: number, dbRaceId: string) {
         .eq('session_type', 'qualifying')
 
       for (const pred of predictions || []) {
-        const points = pred.pole_driver === poleNum ? POINTS.QUALI_POLE : 0
+        let points = 0
+        if (pred.pole_driver === poleNum) {
+          points = POINTS.QUALI_POLE // 3 Punkte für richtigen Pole-Tipp
+        } else if (pred.pole_driver === p2Num) {
+          points = POINTS.QUALI_POLE_ON_P2 // 1 Punkt wenn Pole-Tipp auf P2 ist
+        }
         await supabase.from('predictions').update({ points_earned: points }).eq('id', pred.id)
       }
 
@@ -135,20 +149,20 @@ async function calculateRacePoints(raceRound: number, dbRaceId: string) {
       for (const pred of predictions || []) {
         let points = 0
 
+        // P1 Tipp
         if (pred.p1_driver === p1Num) points += POINTS.RACE_P1
         else if (pred.p1_driver && podium.includes(pred.p1_driver)) points += POINTS.RACE_ON_PODIUM
 
+        // P2 Tipp
         if (pred.p2_driver === p2Num) points += POINTS.RACE_P2
         else if (pred.p2_driver && podium.includes(pred.p2_driver)) points += POINTS.RACE_ON_PODIUM
 
+        // P3 Tipp
         if (pred.p3_driver === p3Num) points += POINTS.RACE_P3
         else if (pred.p3_driver && podium.includes(pred.p3_driver)) points += POINTS.RACE_ON_PODIUM
 
-        if (pred.p1_driver === p1Num && pred.p2_driver === p2Num && pred.p3_driver === p3Num) {
-          points += POINTS.RACE_PERFECT_BONUS
-        }
-
-        if (pred.fastest_lap_driver === flNum) points += POINTS.RACE_FASTEST_LAP
+        // Fastest Lap Bonus
+        if (pred.fastest_lap_driver === flNum) points += POINTS.FASTEST_LAP
 
         await supabase.from('predictions').update({ points_earned: points }).eq('id', pred.id)
       }
