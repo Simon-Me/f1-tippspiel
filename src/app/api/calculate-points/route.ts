@@ -222,21 +222,7 @@ export async function GET(request: Request) {
         .not('id', 'is', null)
       if (predError) console.error('Pred reset error:', predError)
       
-      // 2. Alle Rennen auf "pending" setzen
-      const { error: raceError } = await supabase
-        .from('races')
-        .update({ status: 'pending' })
-        .eq('season', 2025)
-      if (raceError) console.error('Race reset error:', raceError)
-      
-      // 3. Alle Profile-Punkte auf 0 setzen (aber Coins behalten!)
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ total_points: 0 })
-        .not('id', 'is', null)
-      if (profileError) console.error('Profile reset error:', profileError)
-      
-      // 4. Alle vergangenen Rennen neu berechnen
+      // 2. Alle vergangenen Rennen neu berechnen
       const today = new Date().toISOString().split('T')[0]
       const { data: pastRaces, error: fetchError } = await supabase
         .from('races')
@@ -250,20 +236,47 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Failed to fetch races', details: fetchError }, { status: 500 })
       }
       
-      const results: { round: number, name: string, calculated: boolean }[] = []
+      const results: { round: number, name: string, quali: boolean, sprint: boolean, race: boolean }[] = []
       
       for (const race of pastRaces || []) {
         console.log(`[Recalc] Processing Round ${race.round}: ${race.race_name}`)
         const calcResult = await calculateRacePoints(race.round, race.id)
         
-        if (calcResult.race?.calculated) {
+        // Markiere als finished wenn mindestens Race oder Quali berechnet wurde
+        const hasResults = calcResult.race?.calculated || calcResult.qualifying?.calculated
+        if (hasResults) {
           await supabase.from('races').update({ status: 'finished' }).eq('id', race.id)
-          results.push({ round: race.round, name: race.race_name, calculated: true })
         }
+        
+        results.push({ 
+          round: race.round, 
+          name: race.race_name, 
+          quali: !!calcResult.qualifying?.calculated,
+          sprint: !!calcResult.sprint?.calculated,
+          race: !!calcResult.race?.calculated
+        })
       }
       
-      // 5. Profile-Punkte aktualisieren
-      const profilesUpdated = await updateAllProfiles()
+      // 3. Profile-Punkte aktualisieren (OHNE Coins-Diff - nur Punkte zählen)
+      const { data: allProfiles } = await supabase.from('profiles').select('id')
+      let profilesUpdated = 0
+      
+      for (const profile of allProfiles || []) {
+        const { data: userPreds } = await supabase
+          .from('predictions')
+          .select('points_earned')
+          .eq('user_id', profile.id)
+
+        const totalPoints = userPreds?.reduce((sum, p) => sum + (p.points_earned || 0), 0) || 0
+        const predCount = userPreds?.length || 0
+        
+        await supabase
+          .from('profiles')
+          .update({ total_points: totalPoints, predictions_count: predCount })
+          .eq('id', profile.id)
+        
+        profilesUpdated++
+      }
       
       return NextResponse.json({
         success: true,
