@@ -9,8 +9,7 @@ const supabase = createClient(
 // Neues Punktesystem (vereinfacht)
 const POINTS = {
   // Qualifikation
-  QUALI_POLE: 3,        // Richtiger Pole-Tipp
-  QUALI_POLE_ON_P2: 1,  // Pole-Tipp ist auf P2
+  QUALI_POLE: 3,        // Richtiger Pole-Tipp (nur exakt!)
   
   // Sprintrennen
   SPRINT_P1: 3,         // Richtiger P1
@@ -57,9 +56,7 @@ async function calculateRacePoints(raceRound: number, dbRaceId: string) {
 
     if (qualiResults?.length > 0) {
       const pole = qualiResults[0]
-      const p2 = qualiResults[1]
       const poleNum = getDriverNumber(pole.Driver.code, pole.Driver.permanentNumber)
-      const p2Num = p2 ? getDriverNumber(p2.Driver.code, p2.Driver.permanentNumber) : null
 
       const { data: predictions } = await supabase
         .from('predictions')
@@ -68,12 +65,8 @@ async function calculateRacePoints(raceRound: number, dbRaceId: string) {
         .eq('session_type', 'qualifying')
 
       for (const pred of predictions || []) {
-        let points = 0
-        if (pred.pole_driver === poleNum) {
-          points = POINTS.QUALI_POLE // 3 Punkte für richtigen Pole-Tipp
-        } else if (pred.pole_driver === p2Num) {
-          points = POINTS.QUALI_POLE_ON_P2 // 1 Punkt wenn Pole-Tipp auf P2 ist
-        }
+        // Nur exakter Pole-Tipp gibt Punkte
+        const points = pred.pole_driver === poleNum ? POINTS.QUALI_POLE : 0
         await supabase.from('predictions').update({ points_earned: points }).eq('id', pred.id)
       }
 

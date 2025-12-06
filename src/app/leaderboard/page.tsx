@@ -821,7 +821,6 @@ export default function LeaderboardPage() {
                       <div className="bg-zinc-800/50 rounded-lg p-2">
                         <p className="text-blue-400 font-bold mb-1">Quali</p>
                         <div className="text-gray-400">Pole: <span className="text-white">3</span></div>
-                        <div className="text-gray-400">Pole auf P2: <span className="text-white">1</span></div>
                       </div>
                       <div className="bg-zinc-800/50 rounded-lg p-2">
                         <p className="text-purple-400 font-bold mb-1">Sprint</p>
