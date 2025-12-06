@@ -210,7 +210,7 @@ export default function LeaderboardPage() {
   useEffect(() => {
     if (hasLoadedRef.current) return
     hasLoadedRef.current = true
-    
+
     const fetchData = async () => {
       try {
         const { data: profilesData } = await supabase
@@ -480,11 +480,11 @@ export default function LeaderboardPage() {
                             <div>
                               <span className="text-orange-400 text-xs">P3</span>
                               <p className="text-white font-bold text-sm">{sessionResults.sprint.p3Name}</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      
+              </div>
+            </div>
+          </div>
+        )}
+
                       {/* Race */}
                       {sessionResults.race && (
                         <div className="p-3 bg-red-950/30 rounded-xl border border-red-900/30">
@@ -631,8 +631,8 @@ export default function LeaderboardPage() {
                             
                             const sprintPodium = sessionResults.sprint ? [sessionResults.sprint.p1, sessionResults.sprint.p2, sessionResults.sprint.p3] : []
                             const racePodium = sessionResults.race ? [sessionResults.race.p1, sessionResults.race.p2, sessionResults.race.p3] : []
-                            
-                            return (
+
+              return (
                               <tr 
                                 key={player.oderId} 
                                 className={`border-b border-zinc-800 last:border-0 hover:bg-zinc-800/30 ${isMe ? 'bg-red-950/20' : ''}`}

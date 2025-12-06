@@ -190,7 +190,7 @@ export default function Navbar() {
                     <div>
                       <p className="font-semibold">{profile?.username}</p>
                       <div className="flex items-center gap-3 text-sm">
-                        <span className="text-[#E10600] font-bold">{profile?.total_points || 0} Pts</span>
+                    <span className="text-[#E10600] font-bold">{profile?.total_points || 0} Pts</span>
                         <span className="text-yellow-400 flex items-center gap-1">
                           <Coins className="w-3 h-3" />
                           {profile?.coins || 0}

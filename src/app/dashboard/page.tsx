@@ -89,7 +89,7 @@ export default function DashboardPage() {
           if (races?.[0]) {
             setNextRace(races[0])
             
-            const { data: preds } = await supabase
+        const { data: preds } = await supabase
               .from('predictions')
               .select('*')
               .eq('user_id', userId)
@@ -114,7 +114,7 @@ export default function DashboardPage() {
     
     fetchData()
   }, [user])
-
+          
   // Session-Zeiten holen - via Proxy
   useEffect(() => {
     if (!nextRace) return
@@ -227,7 +227,7 @@ export default function DashboardPage() {
         {/* Begrüßung */}
         <div className="mb-12 flex items-center gap-4">
           <Avatar url={profile?.avatar_url} username={profile?.username} size="xl" />
-          <div>
+            <div>
             <p className="text-gray-500 text-sm uppercase tracking-wider mb-1">F1 Tippnasen 2025</p>
             <h1 className="text-4xl font-bold">Hey, {profile?.username} 👋</h1>
             <div className="flex items-center gap-3 mt-2 text-sm">
@@ -255,7 +255,7 @@ export default function DashboardPage() {
         {/* WM Rennstrecke Visualisierung */}
         <div className="mb-12">
           <SeasonRaceTrack currentUserId={user?.id} />
-        </div>
+            </div>
 
         {/* Status */}
         {calcStatus === 'calculating' && (
@@ -277,7 +277,7 @@ export default function DashboardPage() {
                     <span className="text-4xl mb-2 block">{getCountryFlag(nextRace.race_name)}</span>
                     <h2 className="text-2xl font-bold">{nextRace.race_name}</h2>
                     <p className="text-gray-500">{nextRace.circuit_name}</p>
-                  </div>
+              </div>
                   {nextSessionName && (
                     <span className={`text-xs font-bold px-3 py-1 rounded-full ${
                       nextSessionName === 'Sprint' ? 'bg-purple-600' :
@@ -287,7 +287,7 @@ export default function DashboardPage() {
                       {nextSessionName.toUpperCase()}
                     </span>
                   )}
-                </div>
+                    </div>
                 
                 {nextSessionTime && (
                   <div className="flex items-center gap-3 bg-black/30 rounded-xl p-4 mb-4">
@@ -303,7 +303,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 )}
-                
+
                 {/* Tipp Status */}
                 <div className="flex items-center gap-3">
                   {hasTipped ? (
@@ -317,9 +317,9 @@ export default function DashboardPage() {
                       <span className="text-yellow-500">Noch nicht getippt</span>
                     </>
                   )}
-                </div>
               </div>
-              
+            </div>
+
               <Link 
                 href={`/races/${nextRace.id}/predict`}
                 className="flex items-center justify-between bg-red-600 hover:bg-red-500 p-4 transition-colors"
