@@ -238,14 +238,17 @@ export default function LeaderboardPage() {
         if (races) {
           setAllRaces(races)
           
-          // Finde das letzte abgeschlossene Rennen
-          const finishedRaces = races.filter(r => r.status === 'finished')
-          if (finishedRaces.length > 0) {
-            const lastFinished = finishedRaces[finishedRaces.length - 1]
-            const idx = races.findIndex(r => r.id === lastFinished.id)
+          // Finde das letzte Rennen das schon stattgefunden hat (basierend auf Datum)
+          const today = new Date()
+          const pastRaces = races.filter(r => new Date(r.race_date) <= today)
+          
+          if (pastRaces.length > 0) {
+            // Nimm das letzte vergangene Rennen
+            const lastPastRace = pastRaces[pastRaces.length - 1]
+            const idx = races.findIndex(r => r.id === lastPastRace.id)
             setSelectedRaceIndex(idx)
             
-            await loadRaceData(lastFinished)
+            await loadRaceData(lastPastRace)
           }
         }
       } catch (e) { console.error(e) }
@@ -600,9 +603,12 @@ export default function LeaderboardPage() {
                                 )}
                               </>
                             ) : (
-                              /* Bei kommenden Rennen: Alle Tipp-Spalten anzeigen */
+                              /* Bei kommenden Rennen: Alle Tipp-Spalten anzeigen inkl. Sprint */
                               <>
                                 <th className="text-center p-3 text-blue-400 font-medium">Q Pole</th>
+                                <th className="text-center p-3 text-purple-400 font-medium">S P1</th>
+                                <th className="text-center p-3 text-purple-400 font-medium">S P2</th>
+                                <th className="text-center p-3 text-purple-400 font-medium">S P3</th>
                                 <th className="text-center p-3 text-red-400 font-medium">R P1</th>
                                 <th className="text-center p-3 text-red-400 font-medium">R P2</th>
                                 <th className="text-center p-3 text-red-400 font-medium">R P3</th>
@@ -736,10 +742,19 @@ export default function LeaderboardPage() {
                                     )}
                                   </>
                                 ) : (
-                                  /* Bei kommenden Rennen: Einfache Anzeige ohne Bewertung */
+                                  /* Bei kommenden Rennen: Einfache Anzeige ohne Bewertung inkl. Sprint */
                                   <>
                                     <td className="p-3 text-center">
                                       <span className="text-white">{qualiTip?.tipPole || '-'}</span>
+                                    </td>
+                                    <td className="p-3 text-center">
+                                      <span className="text-white">{sprintTip?.tipP1 || '-'}</span>
+                                    </td>
+                                    <td className="p-3 text-center">
+                                      <span className="text-white">{sprintTip?.tipP2 || '-'}</span>
+                                    </td>
+                                    <td className="p-3 text-center">
+                                      <span className="text-white">{sprintTip?.tipP3 || '-'}</span>
                                     </td>
                                     <td className="p-3 text-center">
                                       <span className="text-white">{raceTip?.tipP1 || '-'}</span>
