@@ -234,10 +234,15 @@ async function updateAllProfiles() {
 
 // HAUPT-ROUTE: Automatisch alle unberechneten Rennen finden und berechnen
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const forceRound = searchParams.get('round')
-  const recalcAll = searchParams.get('recalc') === 'all'
-  const roundsParam = searchParams.get('rounds') // z.B. "23,24" für mehrere Runden
+  console.log('[API] calculate-points called')
+  
+  try {
+    const { searchParams } = new URL(request.url)
+    const forceRound = searchParams.get('round')
+    const recalcAll = searchParams.get('recalc') === 'all'
+    const roundsParam = searchParams.get('rounds') // z.B. "23,24" für mehrere Runden
+    
+    console.log('[API] Params:', { forceRound, recalcAll, roundsParam })
   
   // KOMPLETT NEU BERECHNEN: ?recalc=all
   if (recalcAll) {
@@ -453,6 +458,10 @@ export async function GET(request: Request) {
     races: calculated,
     profilesUpdated
   })
+  } catch (error) {
+    console.error('[API] Unexpected error:', error)
+    return NextResponse.json({ error: 'Server error', details: String(error) }, { status: 500 })
+  }
 }
 
 export async function POST(request: Request) {
