@@ -202,20 +202,17 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const forceRound = searchParams.get('round')
   const recalcAll = searchParams.get('recalc') === 'all'
+  const roundsParam = searchParams.get('rounds') // z.B. "23,24" für mehrere Runden
   
   // KOMPLETT NEU BERECHNEN: ?recalc=all
   if (recalcAll) {
     console.log('[Recalc] Starting full recalculation with new points system...')
     
     try {
-      // 1. Alle Prediction-Punkte auf 0 setzen
-      const { error: predError } = await supabase
-        .from('predictions')
-        .update({ points_earned: 0 })
-        .not('id', 'is', null)
-      if (predError) console.error('Pred reset error:', predError)
+      // WICHTIG: Wir setzen Punkte NICHT mehr global auf 0!
+      // Stattdessen berechnen wir jedes Rennen einzeln und updaten die Punkte
       
-      // 2. Alle vergangenen Rennen neu berechnen
+      // Alle vergangenen Rennen neu berechnen (nur die mit Tipps)
       const today = new Date().toISOString().split('T')[0]
       const { data: pastRaces, error: fetchError } = await supabase
         .from('races')
@@ -283,6 +280,50 @@ export async function GET(request: Request) {
       console.error('[Recalc] Error:', err)
       return NextResponse.json({ error: 'Recalc failed', details: String(err) }, { status: 500 })
     }
+  }
+  
+  // Mehrere spezifische Runden berechnen (z.B. ?rounds=23,24)
+  if (roundsParam) {
+    const rounds = roundsParam.split(',').map(r => parseInt(r.trim())).filter(r => !isNaN(r))
+    console.log(`[Multi-Calc] Processing rounds: ${rounds.join(', ')}`)
+    
+    const results: { round: number, name: string, quali: boolean, sprint: boolean, race: boolean }[] = []
+    
+    for (const round of rounds) {
+      const { data: dbRace } = await supabase
+        .from('races')
+        .select('id, race_name')
+        .eq('season', 2025)
+        .eq('round', round)
+        .maybeSingle()
+      
+      if (dbRace) {
+        console.log(`[Multi-Calc] Processing Round ${round}: ${dbRace.race_name}`)
+        const calcResult = await calculateRacePoints(round, dbRace.id)
+        
+        if (calcResult.race?.calculated || calcResult.qualifying?.calculated) {
+          await supabase.from('races').update({ status: 'finished' }).eq('id', dbRace.id)
+        }
+        
+        results.push({
+          round,
+          name: dbRace.race_name,
+          quali: !!calcResult.qualifying?.calculated,
+          sprint: !!calcResult.sprint?.calculated,
+          race: !!calcResult.race?.calculated
+        })
+      }
+    }
+    
+    const profilesUpdated = await updateAllProfiles()
+    
+    return NextResponse.json({
+      success: true,
+      mode: 'multi',
+      rounds,
+      races: results,
+      profilesUpdated
+    })
   }
   
   // Wenn eine spezifische Runde angegeben, nur diese berechnen
