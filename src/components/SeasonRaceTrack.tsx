@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { CAR_ITEMS } from '@/lib/shopItems'
-import { Trophy, Medal, Car } from 'lucide-react'
+import { Trophy, Medal, Car, Crown, Sparkles } from 'lucide-react'
 import Avatar from './Avatar'
 
 interface PlayerWithCar {
@@ -18,6 +18,7 @@ interface PlayerWithCar {
 
 interface SeasonRaceTrackProps {
   currentUserId?: string
+  seasonEnded?: boolean
 }
 
 // Standard TopView - Default Car
@@ -42,7 +43,7 @@ function getCarTopView(carId?: string): string {
   return DEFAULT_CAR_TOP
 }
 
-export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps) {
+export default function SeasonRaceTrack({ currentUserId, seasonEnded = false }: SeasonRaceTrackProps) {
   const [players, setPlayers] = useState<PlayerWithCar[]>([])
   const [maxPoints, setMaxPoints] = useState(100)
   const [loading, setLoading] = useState(true)
@@ -151,28 +152,55 @@ export default function SeasonRaceTrack({ currentUserId }: SeasonRaceTrackProps)
         </div>
 
         {/* Spieler */}
-        {sortedPlayers.map((player) => {
+        {sortedPlayers.map((player, index) => {
           const position = maxPoints > 0 
             ? Math.min((player.total_points / maxPoints) * 70 + 12, 82)
             : 12
+          const isWinner = index === 0 && seasonEnded
           
           return (
             <div
               key={player.id}
-              className="relative flex items-center h-12 md:h-20 mb-1 md:mb-2 group"
+              className={`relative flex items-center h-12 md:h-20 mb-1 md:mb-2 group ${isWinner ? 'z-30' : ''}`}
               style={{ paddingLeft: `${position}%` }}
               onMouseEnter={() => setSelectedPlayer(player)}
               onMouseLeave={() => setSelectedPlayer(null)}
             >
+              {/* Winner Crown & Glow */}
+              {isWinner && (
+                <>
+                  {/* Pulsierender Glow-Ring */}
+                  <div className="absolute -inset-4 md:-inset-6 animate-pulse">
+                    <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-400 rounded-full blur-xl opacity-60 animate-spin-slow" />
+                  </div>
+                  {/* Sparkles */}
+                  <div className="absolute -top-4 md:-top-6 left-1/2 -translate-x-1/2 text-yellow-400 animate-bounce">
+                    <Crown className="w-6 h-6 md:w-8 md:h-8 drop-shadow-lg" fill="currentColor" />
+                  </div>
+                  {/* Floating Sparkles */}
+                  <Sparkles className="absolute -top-2 -right-2 w-4 h-4 text-yellow-300 animate-ping" />
+                  <Sparkles className="absolute -bottom-1 -left-2 w-3 h-3 text-amber-300 animate-ping" style={{ animationDelay: '0.5s' }} />
+                </>
+              )}
+              
               {/* Auto */}
-              <div className="relative flex items-center transition-all cursor-pointer group-hover:z-20 group-hover:scale-105">
+              <div className={`relative flex items-center transition-all cursor-pointer group-hover:z-20 group-hover:scale-105 ${isWinner ? 'scale-110 md:scale-125' : ''}`}>
                 <img 
                   src={getCarTopView(player.equippedCarId)}
                   alt=""
-                  className="h-10 md:h-20 object-contain"
+                  className={`h-10 md:h-20 object-contain ${isWinner ? 'drop-shadow-[0_0_20px_rgba(255,215,0,0.8)]' : ''}`}
                   style={{ transform: 'rotate(180deg)' }}
                 />
               </div>
+              
+              {/* Winner Label */}
+              {isWinner && (
+                <div className="absolute -bottom-6 md:-bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                  <span className="bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-xs md:text-sm font-black px-3 py-1 rounded-full shadow-lg animate-pulse">
+                    🏆 WELTMEISTER 2025 🏆
+                  </span>
+                </div>
+              )}
             </div>
           )
         })}

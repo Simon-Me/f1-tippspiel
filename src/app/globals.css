@@ -368,3 +368,49 @@ body {
 .animate-speed-lines {
   animation: speed-lines-move 0.8s linear infinite;
 }
+
+/* Winner Celebration Animations */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+@keyframes glow-pulse {
+  0%, 100% { 
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.5), 0 0 40px rgba(255, 215, 0, 0.3), 0 0 60px rgba(255, 215, 0, 0.2);
+  }
+  50% { 
+    box-shadow: 0 0 40px rgba(255, 215, 0, 0.8), 0 0 80px rgba(255, 215, 0, 0.5), 0 0 120px rgba(255, 215, 0, 0.3);
+  }
+}
+
+.glow-gold {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Rainbow text for winner */
+@keyframes rainbow-text {
+  0% { color: #FFD700; }
+  25% { color: #FFA500; }
+  50% { color: #FF6B6B; }
+  75% { color: #FFA500; }
+  100% { color: #FFD700; }
+}
+
+.animate-rainbow-text {
+  animation: rainbow-text 3s linear infinite;
+}
+
+/* Confetti Float */
+@keyframes confetti-fall {
+  0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+.confetti {
+  animation: confetti-fall 4s linear infinite;
+}

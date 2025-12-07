@@ -7,12 +7,16 @@ import { useAuth } from '@/contexts/AuthContext'
 import Navbar from '@/components/Navbar'
 import { supabase, Race, Profile, Prediction } from '@/lib/supabase'
 import { getCountryFlag } from '@/lib/images'
-import { ChevronRight, Clock, CheckCircle2, Loader2, AlertCircle, Coins } from 'lucide-react'
+import { ChevronRight, Clock, CheckCircle2, Loader2, AlertCircle, Coins, Trophy, PartyPopper, RotateCcw } from 'lucide-react'
 import Avatar from '@/components/Avatar'
 import SeasonRaceTrack from '@/components/SeasonRaceTrack'
 import OnboardingModal from '@/components/OnboardingModal'
+import Fireworks from '@/components/Fireworks'
 import { differenceInHours, differenceInMinutes, format } from 'date-fns'
 import { de } from 'date-fns/locale'
+
+// Letzte Runde der Saison (Abu Dhabi)
+const LAST_ROUND_OF_SEASON = 24
 
 export default function DashboardPage() {
   const { user, profile, loading, refreshProfile } = useAuth()
@@ -31,6 +35,11 @@ export default function DashboardPage() {
   
   // Onboarding
   const [showOnboarding, setShowOnboarding] = useState(false)
+  
+  // Season Finale Celebration
+  const [seasonEnded, setSeasonEnded] = useState(false)
+  const [showCelebration, setShowCelebration] = useState(false)
+  const [winner, setWinner] = useState<Profile | null>(null)
   
   // Refs um doppelte Aufrufe zu verhindern
   const hasLoadedData = useRef(false)
@@ -68,13 +77,35 @@ export default function DashboardPage() {
         // Finde das nächste Rennen (erstes in der Zukunft)
         const now = new Date()
         let upcomingRace = null
+        let seasonIsOver = true
         
         for (const race of allRaces) {
           const raceDate = new Date(`${race.date}T${race.time || '14:00:00Z'}`)
           if (raceDate > now) {
             upcomingRace = race
+            seasonIsOver = false
             console.log('[Dashboard] Nächstes Rennen gefunden:', race.raceName, 'Round:', race.round)
             break
+          }
+        }
+        
+        // Prüfe ob Celebration Mode aktiv ist (localStorage)
+        const celebrationReset = localStorage.getItem('celebration_reset_2025')
+        const shouldCelebrate = seasonIsOver && !celebrationReset
+        
+        if (shouldCelebrate) {
+          // Prüfe ob das letzte Rennen beendet ist
+          const { data: lastRace } = await supabase
+            .from('races')
+            .select('status')
+            .eq('season', 2025)
+            .eq('round', LAST_ROUND_OF_SEASON)
+            .single()
+          
+          if (lastRace?.status === 'finished') {
+            setSeasonEnded(true)
+            setShowCelebration(true)
+            console.log('[Dashboard] 🎆 SAISON BEENDET - FEUERWERK!')
           }
         }
         
@@ -89,7 +120,7 @@ export default function DashboardPage() {
           if (races?.[0]) {
             setNextRace(races[0])
             
-        const { data: preds } = await supabase
+            const { data: preds } = await supabase
               .from('predictions')
               .select('*')
               .eq('user_id', userId)
@@ -104,7 +135,13 @@ export default function DashboardPage() {
           .select('*')
           .order('total_points', { ascending: false })
         
-        if (profiles) setAllPlayers(profiles)
+        if (profiles) {
+          setAllPlayers(profiles)
+          // Setze den Gewinner (erster in der Liste)
+          if (profiles.length > 0) {
+            setWinner(profiles[0])
+          }
+        }
       } catch (e) {
         console.error('[Dashboard] Fehler:', e)
       } finally {
@@ -221,6 +258,25 @@ export default function DashboardPage() {
     autoCalc()
   }, [user, refreshProfile])
 
+  // Reset Celebration (manuell)
+  const resetCelebration = () => {
+    localStorage.setItem('celebration_reset_2025', 'true')
+    setShowCelebration(false)
+    setSeasonEnded(false)
+  }
+  
+  // Trigger Celebration (für Testing - ?celebrate=1 in URL)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('celebrate') === '1') {
+        localStorage.removeItem('celebration_reset_2025')
+        setSeasonEnded(true)
+        setShowCelebration(true)
+      }
+    }
+  }, [])
+
   if (loading || loadingData) {
     return <div className="min-h-screen bg-black flex items-center justify-center">
       <Loader2 className="w-8 h-8 text-red-500 animate-spin" />
@@ -231,10 +287,69 @@ export default function DashboardPage() {
   const hasTipped = userPredictions.length > 0
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-black text-white relative overflow-hidden">
+      {/* 🎆 FEUERWERK bei Saisonende */}
+      {showCelebration && <Fireworks intensity="high" />}
+      
       <Navbar />
       
       <main className="pt-24 pb-16 px-4 sm:px-6 lg:px-12 xl:px-24 max-w-7xl mx-auto">
+        
+        {/* 🏆 SAISONENDE BANNER */}
+        {showCelebration && winner && (
+          <div className="mb-8 relative">
+            <div className="bg-gradient-to-r from-yellow-600/20 via-amber-500/30 to-yellow-600/20 border-2 border-yellow-500/50 rounded-3xl p-6 md:p-8 text-center relative overflow-hidden">
+              {/* Glitter Background */}
+              <div className="absolute inset-0 overflow-hidden">
+                {[...Array(20)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="absolute w-2 h-2 bg-yellow-400 rounded-full animate-ping"
+                    style={{
+                      left: `${Math.random() * 100}%`,
+                      top: `${Math.random() * 100}%`,
+                      animationDelay: `${Math.random() * 2}s`,
+                      animationDuration: `${1 + Math.random()}s`
+                    }}
+                  />
+                ))}
+              </div>
+              
+              {/* Content */}
+              <div className="relative z-10">
+                <PartyPopper className="w-12 h-12 md:w-16 md:h-16 text-yellow-400 mx-auto mb-4 animate-bounce" />
+                <h2 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-300 mb-2">
+                  🏆 SAISON 2025 BEENDET! 🏆
+                </h2>
+                <p className="text-xl md:text-2xl text-yellow-200 mb-4">
+                  Herzlichen Glückwunsch an unseren Weltmeister:
+                </p>
+                <div className="flex items-center justify-center gap-4 mb-6">
+                  <Avatar url={winner.avatar_url} username={winner.username} size="xl" />
+                  <div className="text-left">
+                    <p className="text-3xl md:text-4xl font-black text-yellow-400 animate-pulse">
+                      {winner.username}
+                    </p>
+                    <p className="text-xl text-yellow-200/80">
+                      {winner.total_points} Punkte
+                    </p>
+                  </div>
+                  <Trophy className="w-16 h-16 md:w-20 md:h-20 text-yellow-400 animate-bounce" fill="currentColor" />
+                </div>
+                
+                {/* Reset Button - nur für Admins sichtbar (oder jeden für Testing) */}
+                <button
+                  onClick={resetCelebration}
+                  className="mt-4 flex items-center gap-2 mx-auto px-4 py-2 bg-zinc-800/50 hover:bg-zinc-700/50 rounded-full text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Feier beenden
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* Begrüßung */}
         <div className="mb-12 flex items-center gap-4">
           <Avatar url={profile?.avatar_url} username={profile?.username} size="xl" />
@@ -265,8 +380,8 @@ export default function DashboardPage() {
 
         {/* WM Rennstrecke Visualisierung */}
         <div className="mb-12">
-          <SeasonRaceTrack currentUserId={user?.id} />
-            </div>
+          <SeasonRaceTrack currentUserId={user?.id} seasonEnded={seasonEnded} />
+        </div>
 
         {/* Status */}
         {calcStatus === 'calculating' && (
