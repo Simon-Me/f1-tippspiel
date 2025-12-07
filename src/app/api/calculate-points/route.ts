@@ -117,9 +117,12 @@ async function calculateRacePoints(raceRound: number, dbRaceId: string) {
 
   // === RACE ===
   try {
+    console.log(`[Race] Fetching results for round ${raceRound}`)
     const raceRes = await fetch(`https://api.jolpi.ca/ergast/f1/2025/${raceRound}/results/`)
     const raceData = await raceRes.json()
     const raceResults = raceData.MRData?.RaceTable?.Races?.[0]?.Results
+
+    console.log(`[Race] Found ${raceResults?.length || 0} results`)
 
     if (raceResults?.length > 0) {
       const p1 = raceResults.find((r: { position: string }) => r.position === '1')
@@ -133,11 +136,16 @@ async function calculateRacePoints(raceRound: number, dbRaceId: string) {
       const flNum = fl ? getDriverNumber(fl.Driver.code, fl.Driver.permanentNumber) : null
       const podium = [p1Num, p2Num, p3Num].filter(n => n !== null)
 
-      const { data: predictions } = await supabase
+      console.log(`[Race] Podium: P1=${p1Num} (${p1?.Driver.code}), P2=${p2Num} (${p2?.Driver.code}), P3=${p3Num} (${p3?.Driver.code}), FL=${flNum} (${fl?.Driver.code})`)
+
+      const { data: predictions, error: predError } = await supabase
         .from('predictions')
         .select('*')
         .eq('race_id', dbRaceId)
         .eq('session_type', 'race')
+
+      console.log(`[Race] Found ${predictions?.length || 0} race predictions for race_id ${dbRaceId}`)
+      if (predError) console.error('[Race] Prediction fetch error:', predError)
 
       for (const pred of predictions || []) {
         let points = 0
@@ -157,7 +165,23 @@ async function calculateRacePoints(raceRound: number, dbRaceId: string) {
         // Fastest Lap Bonus
         if (pred.fastest_lap_driver === flNum) points += POINTS.FASTEST_LAP
 
-        await supabase.from('predictions').update({ points_earned: points }).eq('id', pred.id)
+        console.log(`[Race] Prediction ${pred.id} by user ${pred.user_id}: Tips=${pred.p1_driver},${pred.p2_driver},${pred.p3_driver},${pred.fastest_lap_driver} → ${points} points`)
+        
+        const { data: updateData, error: updateError } = await supabase
+          .from('predictions')
+          .update({ points_earned: points })
+          .eq('id', pred.id)
+          .select()
+        
+        if (updateError) {
+          console.error(`[Race] Update error for prediction ${pred.id}:`, updateError)
+        } else {
+          console.log(`[Race] ✓ Updated prediction ${pred.id}, result:`, updateData)
+          
+          // Verify the update
+          const { data: verify } = await supabase.from('predictions').select('points_earned').eq('id', pred.id).single()
+          console.log(`[Race] Verify prediction ${pred.id}: points_earned = ${verify?.points_earned}`)
+        }
       }
 
       results.race = { p1: p1?.Driver.code, p2: p2?.Driver.code, p3: p3?.Driver.code, fl: fl?.Driver.code, calculated: true }
@@ -169,17 +193,24 @@ async function calculateRacePoints(raceRound: number, dbRaceId: string) {
 
 // Update alle Benutzer-Gesamtpunkte
 async function updateAllProfiles() {
-  const { data: allProfiles } = await supabase.from('profiles').select('id, coins, total_points')
+  const { data: allProfiles, error: fetchError } = await supabase.from('profiles').select('id, username, coins, total_points')
+  if (fetchError) console.error('[UpdateProfiles] Fetch error:', fetchError)
+  
+  console.log(`[UpdateProfiles] Processing ${allProfiles?.length || 0} profiles`)
   
   let updated = 0
   for (const profile of allProfiles || []) {
-    const { data: userPreds } = await supabase
+    const { data: userPreds, error: predError } = await supabase
       .from('predictions')
       .select('points_earned')
       .eq('user_id', profile.id)
 
+    if (predError) console.error(`[UpdateProfiles] Pred fetch error for ${profile.username}:`, predError)
+
     const newTotalPoints = userPreds?.reduce((sum, p) => sum + (p.points_earned || 0), 0) || 0
     const predCount = userPreds?.length || 0
+    
+    console.log(`[UpdateProfiles] ${profile.username}: ${userPreds?.length || 0} predictions, old=${profile.total_points}, new=${newTotalPoints}`)
     
     const oldTotalPoints = profile.total_points || 0
     const pointsDiff = Math.max(0, newTotalPoints - oldTotalPoints)
@@ -191,7 +222,11 @@ async function updateAllProfiles() {
       .update({ total_points: newTotalPoints, predictions_count: predCount, coins: newCoins })
       .eq('id', profile.id)
     
-    if (!error) updated++
+    if (error) console.error(`[UpdateProfiles] Update error for ${profile.username}:`, error)
+    else {
+      console.log(`[UpdateProfiles] ✓ ${profile.username} updated to ${newTotalPoints} points`)
+      updated++
+    }
   }
   
   return updated
@@ -329,6 +364,8 @@ export async function GET(request: Request) {
   // Wenn eine spezifische Runde angegeben, nur diese berechnen
   if (forceRound) {
     const round = parseInt(forceRound)
+    console.log(`[Single-Calc] Starting calculation for round ${round}`)
+    
     const { data: dbRace } = await supabase
       .from('races')
       .select('id, race_name')
@@ -337,25 +374,34 @@ export async function GET(request: Request) {
       .maybeSingle()
     
     if (!dbRace) {
+      console.log(`[Single-Calc] Race not found for round ${round}`)
       return NextResponse.json({ error: 'Race not found', round }, { status: 404 })
     }
     
+    console.log(`[Single-Calc] Found race: ${dbRace.race_name} (ID: ${dbRace.id})`)
+    
     const results = await calculateRacePoints(round, dbRace.id)
+    console.log(`[Single-Calc] Calculation results:`, JSON.stringify(results))
     
     if (results.race?.calculated) {
       await supabase.from('races').update({ status: 'finished' }).eq('id', dbRace.id)
+      console.log(`[Single-Calc] Marked race as finished`)
     }
     
     const profilesUpdated = await updateAllProfiles()
+    console.log(`[Single-Calc] Updated ${profilesUpdated} profiles`)
     
-    return NextResponse.json({ 
+    const response = { 
       success: true, 
       mode: 'single',
       round, 
       raceName: dbRace.race_name,
       results,
       profilesUpdated
-    })
+    }
+    console.log(`[Single-Calc] Returning:`, JSON.stringify(response))
+    
+    return NextResponse.json(response)
   }
   
   // AUTOMATISCHER MODUS: Finde alle Rennen die noch nicht "finished" sind

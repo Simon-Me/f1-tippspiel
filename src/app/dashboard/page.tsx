@@ -183,26 +183,33 @@ export default function DashboardPage() {
       setCalcStatus('calculating')
       
       try {
-        const calcRes = await fetch('/api/calculate-points')
-        const calcData = await calcRes.json()
+        // Hole das letzte Rennen in der Vergangenheit und berechne dessen Punkte
+        const today = new Date().toISOString().split('T')[0]
+        const { data: lastRace } = await supabase
+          .from('races')
+          .select('round')
+          .eq('season', 2025)
+          .lte('race_date', today)
+          .order('race_date', { ascending: false })
+          .limit(1)
+          .single()
         
-        console.log('[Auto-Calc]', calcData)
-        
-        // Prüfe ob was berechnet wurde (Auto-Mode: calculated > 0, Races Array vorhanden)
-        const wasCalculated = calcData.success && (calcData.calculated > 0 || calcData.races?.length > 0)
-        
-        if (wasCalculated) {
-          console.log('[Auto-Calc] Punkte wurden berechnet, lade Profile neu...')
-          // Profile neu laden wenn was berechnet wurde
-          await refreshProfile()
+        if (lastRace) {
+          console.log('[Auto-Calc] Berechne Runde', lastRace.round)
+          const calcRes = await fetch(`/api/calculate-points?round=${lastRace.round}`)
+          const calcData = await calcRes.json()
+          console.log('[Auto-Calc] Ergebnis:', calcData)
           
-          // Players neu laden
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('*')
-            .order('total_points', { ascending: false })
-          
-          if (profiles) setAllPlayers(profiles)
+          if (calcData.success) {
+            await refreshProfile()
+            
+            const { data: profiles } = await supabase
+              .from('profiles')
+              .select('*')
+              .order('total_points', { ascending: false })
+            
+            if (profiles) setAllPlayers(profiles)
+          }
         }
       } catch (e) { 
         console.error('[Auto-Calc] Error:', e) 
