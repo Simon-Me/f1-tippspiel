@@ -188,8 +188,12 @@ export default function DashboardPage() {
         
         console.log('[Auto-Calc]', calcData)
         
-        if (calcData.success && calcData.results?.length > 0) {
-          // Nur Profile neu laden wenn wirklich was berechnet wurde
+        // Prüfe ob was berechnet wurde (Auto-Mode: calculated > 0, Races Array vorhanden)
+        const wasCalculated = calcData.success && (calcData.calculated > 0 || calcData.races?.length > 0)
+        
+        if (wasCalculated) {
+          console.log('[Auto-Calc] Punkte wurden berechnet, lade Profile neu...')
+          // Profile neu laden wenn was berechnet wurde
           await refreshProfile()
           
           // Players neu laden
